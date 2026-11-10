@@ -1562,7 +1562,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     var data = readForm(form), coll = M.coll, id = M.id;
     if (coll === 'jobs' && M.booking) data.booking = M.booking;
     if (coll === 'jobs' && M.plate) data.plate = M.plate;
-    if (coll === 'bookings' && !data.plate && !data.name && !data.phone) { err.textContent = 'Укажите госномер, имя или телефон.'; err.hidden = false; return; }
+    if (coll === 'bookings' && !data.car && !data.plate && !data.name && !data.phone) { err.textContent = 'Укажите марку машины, госномер, имя или телефон.'; err.hidden = false; return; }
     if (coll === 'paint' && digits(data.phone).length < 6) { err.textContent = 'Укажите телефон клиента.'; err.hidden = false; return; }
     if (coll === 'paint' && !data.color) { err.textContent = 'Выберите или впишите цвет.'; err.hidden = false; return; }
     var pend = coll === 'paint' ? M.pending.slice() : [];
