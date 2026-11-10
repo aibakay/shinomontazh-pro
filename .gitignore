@@ -1,0 +1,17 @@
+# секреты и настройки
+.env
+.env.*
+.env.local
+.vercel
+
+# данные CRM (клиенты, работы, копии базы) — не в репозиторий
+.data/
+
+# служебное
+node_modules/
+.taste-skill/
+photos/originals/
+shots/
+*.log
+Thumbs.db
+desktop.ini

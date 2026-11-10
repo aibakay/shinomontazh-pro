@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /crm/
+Disallow: /api/
+
+Sitemap: https://shinomontazh-pro.vercel.app/sitemap.xml

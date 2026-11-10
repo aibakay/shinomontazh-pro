@@ -1,0 +1,14 @@
+{
+  "name": "shinomontazh-pro",
+  "private": true,
+  "description": "Сайт и CRM шиномонтажа PRO (Симферополь)",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
