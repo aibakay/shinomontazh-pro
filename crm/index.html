@@ -194,6 +194,13 @@ input.plate::placeholder{font-family:var(--text);font-weight:400;letter-spacing:
 .drep .dnav{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .drep section{background:var(--soft);border-radius:12px;padding:12px 14px}
 .drep h3{font-size:15px;margin:0 0 6px}
+.cbtns{display:inline-flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.cjobs{display:grid;gap:8px}
+.cjob{display:grid;gap:4px;width:100%;text-align:left;font:inherit;color:inherit;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer}
+.cjob:hover{border-color:var(--ink)}
+.cj-top{display:flex;justify-content:space-between;gap:12px;align-items:baseline;font-weight:600}
+.cj-top b{white-space:nowrap}
+.cj-svc{overflow-wrap:anywhere}
 .drow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:5px 0}
 .drow span{min-width:0;overflow-wrap:anywhere}
 .drow b{font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -1459,7 +1466,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       var r = ['<b>' + h(c.name) + '</b>' + (c.contact || c.phone ? '<br><small class="muted">' + h([c.contact, c.phone].filter(Boolean).join(', ')) + '</small>' : ''), h(c.inn || ''),
         free.length ? '<span class="num">' + money(sum(free, 'sum')) + '</span><br><small class="muted">работ: ' + free.length + '</small>' : '',
         wait.length ? '<span class="num">' + money(sum(wait, 'sum')) + '</span><br><small class="muted">счетов: ' + wait.length + '</small>' : '',
-        '<button class="btn small" type="button" data-cinv="' + c.id + '">Счёт</button>'];
+        '<span class="cbtns"><button class="btn sec small" type="button" data-cjobs="' + c.id + '">Работы' + (js.length ? ' · ' + js.length : '') + '</button><button class="btn small" type="button" data-cinv="' + c.id + '">Счёт</button></span>'];
       r._open = 'companies:' + c.id; return r;
     }));
     out += '<h2 class="sec-title">Счета</h2>' + table([{ t: '№' }, { t: 'Дата' }, { t: 'Компания' }, { t: 'Работ', r: 1 }, { t: 'Сумма', r: 1 }, { t: 'Статус' }, { t: '' }], invs.map(function (v) {
@@ -1473,6 +1480,32 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     }));
     return out;
   };
+  // окно «Работы компании»: все безнальные работы, свежие сверху, со статусом счёта; фильтр и итоги
+  function openCompJobs(cid, flt) {
+    var c = compBy(cid); if (!c) return;
+    flt = flt || 'all';
+    var st = function (j) { var v = jobInvoice(j.id); return !v ? 'free' : v.paid ? 'paid' : 'wait'; };
+    var all = bzJobs(cid).slice().sort(function (a, b) { return b.date.localeCompare(a.date) || b.id - a.id; });
+    var grp = { free: [], wait: [], paid: [] }; all.forEach(function (j) { grp[st(j)].push(j); });
+    var list = flt === 'all' ? all : grp[flt];
+    var chip = function (k, t, n) { return '<button type="button" class="btn ' + (flt === k ? 'dark' : 'sec') + ' small" data-cjf="' + k + '">' + t + ' · ' + n + '</button>'; };
+    var row = function (a, b, cls) { return '<div class="drow' + (cls ? ' ' + cls : '') + '"><span>' + a + '</span><b>' + b + '</b></div>'; };
+    M = { coll: 'compjobs', cid: cid };
+    $('sheet').innerHTML = '<button type="button" class="x" data-close aria-label="Закрыть">×</button><h2 id="mTitle">Работы компании</h2>' +
+      '<div class="drep"><p style="margin:0;font-weight:600;overflow-wrap:anywhere">' + h(c.name) + (c.inn ? ' <small class="muted">ИНН ' + h(c.inn) + '</small>' : '') + '</p>' +
+      (all.length ? '<section>' + row('Без счёта', money(sum(grp.free, 'sum'))) + row('В счёте, ждём оплату', money(sum(grp.wait, 'sum'))) + row('Оплачено', money(sum(grp.paid, 'sum'))) +
+        row('Всего · работ ' + all.length, money(sum(all, 'sum')), 'tot') + '</section>' +
+        '<div class="dnav">' + chip('all', 'Все', all.length) + chip('free', 'Без счёта', grp.free.length) + chip('wait', 'Ждём оплату', grp.wait.length) + chip('paid', 'Оплачено', grp.paid.length) + '</div>' : '') +
+      (list.length ? '<div class="cjobs">' + list.map(function (j) {
+        var v = jobInvoice(j.id), car = [j.car, j.plate].filter(Boolean).join(' ');
+        var tag = !v ? '<span class="tag">Без счёта</span>' : v.paid ? '<span class="tag t-ok">Счёт № ' + v.id + ' · оплачен</span>' : '<span class="tag t-warn">Счёт № ' + v.id + ' · ждём оплату</span>';
+        return '<button type="button" class="cjob" data-cjob="' + j.id + '"><span class="cj-top"><span>' + dmy(j.date) + (car ? ' · ' + h(car) : '') + '</span><b class="num">' + money(j.sum) + '</b></span>' +
+          '<span class="cj-svc">' + h(jobTitle(j) || '—') + '</span>' + (j.master ? '<small class="muted">Мастер: ' + h(j.master) + '</small>' : '') + '<span>' + tag + '</span></button>';
+      }).join('') + '</div>' : '<p class="muted" style="margin:0">' + (all.length ? 'Таких работ нет.' : 'Безнальных работ этой компании пока нет. В работе выберите оплату «Безнал» и эту компанию.') + '</p>') +
+      '</div><div class="acts" style="position:static;margin-bottom:0"><div></div><div>' +
+      (grp.free.length ? '<button type="button" class="btn sec" data-cinv="' + cid + '">Выписать счёт</button>' : '') + '<button type="button" class="btn" data-close>Закрыть</button></div></div>';
+    $('modal').hidden = false;
+  }
   // окно счёта: период, безнальные работы компании галочками (уже выставленные — серые)
   function openInvoice(cid, jid) {
     var c = compBy(cid); if (!c) return;
@@ -2163,6 +2196,9 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     // безнал: реквизиты мастерской, счёт компании, счёт за одну работу, печать, отметка об оплате, удаление счёта
     if (d.shop != null) { var sh = (S.D.shop || [])[0]; openForm('shop', sh ? sh.id : null); return; }
     if (d.cinv) { openInvoice(Number(d.cinv)); return; }
+    if (d.cjobs) { openCompJobs(Number(d.cjobs)); return; }
+    if (d.cjf) { if (M && M.coll === 'compjobs') openCompJobs(M.cid, d.cjf); return; }
+    if (d.cjob) { openForm('jobs', Number(d.cjob)); return; }
     if (d.jinv) { var jj = S.D.jobs.find(function (x) { return x.id === Number(d.jinv); }); if (M && M.dirty && !confirm('Изменения в работе не сохранены. Всё равно перейти к счёту?')) return; closeModal(); if (jj) openInvoice(jj.company, jj.id); return; }
     if (d.iprint) { printInvoice(Number(d.iprint)); return; }
     if (d.iact) { printAct(Number(d.iact)); return; }
