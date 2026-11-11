@@ -403,6 +403,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
   #print .inv .tot{width:auto;margin-left:auto}
   #print .inv .tot td{border:0;padding:1pt 4pt;text-align:right;font-weight:700}
   #print .inv .sign{margin-top:22pt;padding-top:6pt;border-top:2pt solid #000;display:grid;gap:14pt}
+  #print .inv .sign.act{grid-template-columns:1fr 1fr;gap:24pt}
   #print .rc p{margin:4pt 0}
   .cut{border-top:1.5pt dashed #000;margin:10pt 0 8pt;padding-top:3pt;font-size:9pt;text-align:center}
   /* бирка на шины — на всю нижнюю половину листа, читается издалека на складе */
@@ -1220,7 +1221,8 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       var c = compBy(v.company);
       return ['<b>' + v.id + '</b>', dmy(v.date), h(c ? c.name : '—') + (v.note ? '<br><small class="muted">' + h(v.note) + '</small>' : ''), invIds(v).length, '<b class="num">' + money(v.sum) + '</b>',
         v.paid ? '<span class="tag t-ok">Оплачен ' + dm(v.paidOn) + '</span>' : '<span class="tag t-warn">Ждём оплату</span>',
-        '<span style="display:inline-flex;gap:6px;flex-wrap:wrap"><button class="btn sec small" type="button" data-iprint="' + v.id + '">Печать / PDF</button>' +
+        '<span style="display:inline-flex;gap:6px;flex-wrap:wrap"><button class="btn sec small" type="button" data-iprint="' + v.id + '">Счёт / PDF</button>' +
+        '<button class="btn sec small" type="button" data-iact="' + v.id + '">Акт</button>' +
         '<button class="btn ' + (v.paid ? 'sec' : 'dark') + ' small" type="button" data-ipaid="' + v.id + '">' + (v.paid ? 'Не оплачен' : 'Оплачен') + '</button>' +
         '<button class="btn link small" type="button" data-idel="' + v.id + '">Удалить</button></span>'];
     }));
@@ -1315,6 +1317,31 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       (s.footer ? '<p class="small">' + h(s.footer).replace(/\n/g, '<br>') + '</p>' : '') +
       '<div class="sign">' + (ip ? '<div>Индивидуальный предприниматель ____________________ ' + h(s.head || '') + '</div>' :
         '<div>Руководитель ____________________ ' + h(s.head || '') + '</div><div>Бухгалтер ____________________ ' + h(s.head || '') + '</div>') + '</div></div>';
+    window.print();
+  }
+
+  // акт выполненных работ (оказанных услуг) по тем же работам, что в счёте; номер акта = номер счёта, дата — день последней работы
+  function printAct(id) {
+    var v = (S.D.invoices || []).find(function (x) { return x.id === id; }); if (!v) return;
+    var c = compBy(v.company) || {}, s = (S.D.shop || [])[0] || {};
+    var js = invIds(v).map(function (n) { return S.D.jobs.find(function (j) { return j.id === n; }); }).filter(Boolean).sort(function (a, b) { return a.date.localeCompare(b.date) || a.id - b.id; });
+    var total = sum(js, 'sum'), rm = /(\d+)%/.exec(s.vat || ''), rate = rm ? Number(rm[1]) : 0, vat = rate ? Math.round(total * rate / (100 + rate) * 100) / 100 : 0;
+    var date = js.length ? js[js.length - 1].date : v.date;
+    var party = function (o) { return h([o.name, o.inn ? 'ИНН ' + o.inn : '', o.kpp ? 'КПП ' + o.kpp : '', o.address, o.bank && o.account ? 'р/с ' + o.account + ' в ' + o.bank + (o.bik ? ', БИК ' + o.bik : '') + (o.corr ? ', к/с ' + o.corr : '') : ''].filter(Boolean).join(', ')); };
+    var line = function (j) { var t = jobTitle(j) || 'Услуги шиномонтажа'; return t.charAt(0).toUpperCase() + t.slice(1) + ' (' + [j.car, j.plate, dmy(j.date)].filter(Boolean).join(', ') + ')'; };
+    var ip = String(s.inn || '').length === 12;
+    $('print').innerHTML = '<div class="inv">' +
+      '<h1>Акт № ' + v.id + ' от ' + longDate(date) + '</h1>' +
+      '<table class="pt"><tr><td>Исполнитель:</td><td><b>' + party(s) + '</b></td></tr>' +
+      '<tr><td>Заказчик:</td><td><b>' + party(c) + '</b></td></tr>' +
+      '<tr><td>Основание:</td><td><b>Счёт на оплату № ' + v.id + ' от ' + dmy(v.date) + '</b></td></tr></table>' +
+      '<table class="items"><tr><th>№</th><th>Наименование работ, услуг</th><th>Кол-во</th><th>Ед.</th><th>Цена</th><th>Сумма</th></tr>' +
+      js.map(function (j, i) { return '<tr><td class="c">' + (i + 1) + '</td><td>' + h(line(j)) + '</td><td class="c">1</td><td class="c">усл.</td><td class="r">' + rub(j.sum) + '</td><td class="r">' + rub(j.sum) + '</td></tr>'; }).join('') + '</table>' +
+      '<table class="tot"><tr><td>Итого:</td><td>' + rub(total) + '</td></tr><tr><td>' + (rate ? 'В том числе НДС (' + rate + '%):' : 'Без налога (НДС)') + '</td><td>' + (rate ? rub(vat) : '—') + '</td></tr></table>' +
+      '<p>Всего оказано услуг ' + js.length + ', на сумму ' + rub(total) + ' руб.<br><b>' + rubWords(total) + '</b></p>' +
+      '<p>Вышеперечисленные услуги выполнены полностью и в срок. Заказчик претензий по объёму, качеству и срокам оказания услуг не имеет.</p>' +
+      '<div class="sign act"><div><b>Исполнитель</b><br><br>' + (ip ? 'ИП ' : '') + '____________________ ' + h(s.head || '') + '<br><small>М. П.</small></div>' +
+      '<div><b>Заказчик</b><br><br>____________________ ' + h(c.contact || '') + '<br><small>М. П.</small></div></div></div>';
     window.print();
   }
 
@@ -1510,7 +1537,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       (hk ? '<button type="button" class="btn sec" data-hist="' + h(hk) + '">История</button>' : '') +
       (coll === 'storage' && id ? '<button type="button" class="btn sec" data-print="' + id + '">Квитанция</button>' : '') +
       (coll === 'paint' && id ? '<button type="button" class="btn sec" data-pprint="' + id + '">Квитанция и бирка</button>' : '') +
-      (coll === 'jobs' && id && owner() && doc.pay === 'Безнал' && doc.company ? (jobInvoice(id) ? '<button type="button" class="btn sec" data-iprint="' + jobInvoice(id).id + '">Счёт № ' + jobInvoice(id).id + '</button>' : '<button type="button" class="btn sec" data-jinv="' + id + '">Выписать счёт</button>') : '') + '</div>' +
+      (coll === 'jobs' && id && owner() && doc.pay === 'Безнал' && doc.company ? (jobInvoice(id) ? '<button type="button" class="btn sec" data-iprint="' + jobInvoice(id).id + '">Счёт № ' + jobInvoice(id).id + '</button><button type="button" class="btn sec" data-iact="' + jobInvoice(id).id + '">Акт</button>' : '<button type="button" class="btn sec" data-jinv="' + id + '">Выписать счёт</button>') : '') + '</div>' +
       '<div><button type="button" class="btn sec" data-close>' + (locked ? 'Закрыть' : 'Отмена') + '</button>' + (locked ? '' : '<button type="submit" class="btn">Сохранить</button>') + '</div></div></form>';
     $('modal').hidden = false;
     var form = $('docForm');
@@ -1852,6 +1879,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     if (d.cinv) { openInvoice(Number(d.cinv)); return; }
     if (d.jinv) { var jj = S.D.jobs.find(function (x) { return x.id === Number(d.jinv); }); if (M && M.dirty && !confirm('Изменения в работе не сохранены. Всё равно перейти к счёту?')) return; closeModal(); if (jj) openInvoice(jj.company, jj.id); return; }
     if (d.iprint) { printInvoice(Number(d.iprint)); return; }
+    if (d.iact) { printAct(Number(d.iact)); return; }
     if (d.ipaid) {
       var iv = S.D.invoices.find(function (x) { return x.id === Number(d.ipaid); });
       t.disabled = true;
