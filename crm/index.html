@@ -488,7 +488,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
 
   var S = { role: null, D: null, view: 'today', f: {} };
   var VIEWS = [
-    ['today', 'Сегодня'], ['bookings', 'Запись'], ['schedule', 'Расписание'], ['jobs', 'Работы'],
+    ['today', 'Сегодня'], ['bookings', 'Запись'], ['schedule', 'Расписание'], ['jobs', 'Работы'], ['history', 'История'],
     ['clients', 'Клиенты', true], ['storage', 'Хранение', true], ['tires', 'Б/у шины', true], ['paint', 'Покраска', true], ['companies', 'Безнал', true], ['report', 'Отчёт', true], ['prices', 'Прайс'], ['staff', 'Сотрудники', true], ['log', 'Журнал', true]
   ];
 
@@ -832,6 +832,121 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     var foot = list.length ? ['Итого', '', cars(list) + ' маш.', '', '<span class="num">' + money(sum(list, 'sum')) + '</span>', payTot, '', ''] : null;
     return top('Работы', tools) + table(cols, rows, foot);
   };
+
+  // ---------- история машины (11.11.2026): все работы, записи, хранение и покраска одной машины и сколько клиент заплатил всего.
+  // Машину узнаём по госномеру и телефону: запись с номером и телефоном связывает их вместе.
+  // У работ без номера (в форме только марка) ключ — марка, поэтому одинаковые марки без номера попадают в одну историю.
+  function hRecs() {
+    var used = {}; S.D.jobs.forEach(function (j) { if (j.booking) used[j.booking] = 1; });
+    var bkBy = {}; S.D.bookings.forEach(function (b) { bkBy[b.id] = b; });
+    var out = [];
+    S.D.jobs.forEach(function (j) {
+      var b = j.booking ? bkBy[j.booking] : null;
+      out.push({ k: 'job', o: j, date: j.date, plate: j.plate || (b && b.plate) || '', car: j.car || carOf(j) || (b && carOf(b)) || '', phone: phoneOf(j) || (b && phoneOf(b)) || '', name: who(j) || (b && who(b)) || '', sum: j.sum || 0 });
+    });
+    S.D.bookings.forEach(function (b) {
+      if (used[b.id]) return; // запись уже превратилась в работу
+      out.push({ k: 'bk', o: b, date: b.date || (b.created || '').slice(0, 10), plate: b.plate || '', car: carOf(b), phone: phoneOf(b), name: who(b), sum: 0 });
+    });
+    (S.D.storage || []).forEach(function (s) {
+      out.push({ k: 'st', o: s, date: s.received, plate: s.plate || '', car: carOf(s), phone: phoneOf(s), name: who(s), sum: s.paid ? s.cost || 0 : 0 });
+    });
+    (S.D.paint || []).forEach(function (o) {
+      out.push({ k: 'pt', o: o, date: o.received, plate: o.plate || '', car: carOf(o), phone: o.phone || phoneOf(o), name: who(o), sum: o.status === 'Выдано' ? o.price || 0 : o.prepaid || 0 });
+    });
+    return out;
+  }
+  function hKeys(r) {
+    var ks = []; if (r.plate) ks.push('p:' + r.plate);
+    var ph = digits(r.phone); if (ph.length >= 6) ks.push('t:' + ph);
+    if (!ks.length && r.car) ks.push('m:' + r.car.trim().toLowerCase().replace(/\s+/g, ' '));
+    return ks;
+  }
+  // группы «одна машина»: объединяем записи, у которых совпал госномер или телефон
+  function hGroups() {
+    var par = {}, find = function (x) { while (par[x] !== x) { par[x] = par[par[x]]; x = par[x]; } return x; };
+    var recs = hRecs().filter(function (r) { r.ks = hKeys(r); return r.ks.length; });
+    recs.forEach(function (r) { r.ks.forEach(function (k) { if (par[k] == null) par[k] = k; }); for (var i = 1; i < r.ks.length; i++) par[find(r.ks[i])] = find(r.ks[0]); });
+    var g = {};
+    recs.forEach(function (r) { var root = find(r.ks[0]); (g[root] = g[root] || { recs: [] }).recs.push(r); });
+    return Object.keys(g).map(function (root) {
+      var x = g[root], rs = x.recs.sort(function (a, b) { return (b.date || '').localeCompare(a.date || '') || b.o.id - a.o.id; });
+      var pick = function (f) { var v = {}; rs.forEach(function (r) { if (r[f]) v[r[f]] = 1; }); return Object.keys(v); };
+      var ks = {}; rs.forEach(function (r) { r.ks.forEach(function (k) { ks[k] = 1; }); });
+      var js = rs.filter(function (r) { return r.k === 'job'; }).map(function (r) { return r.o; });
+      var done = rs.filter(function (r) { return r.k !== 'bk' && r.date && r.date <= today(); });
+      return {
+        key: Object.keys(ks).sort()[0], keys: ks, recs: rs, plates: pick('plate'), cars: pick('car'), phones: pick('phone'), names: pick('name'),
+        visits: cars(js), paid: sum(rs, 'sum'), jobsSum: sum(js, 'sum'), last: done.length ? done[0].date : '', first: done.length ? done[done.length - 1].date : ''
+      };
+    });
+  }
+  function hMatch(g, q) {
+    var low = q.toLowerCase(), pl = plate(q), dg = q.replace(/\D/g, '');
+    if (pl.length >= 2 && g.plates.some(function (p) { return p.indexOf(pl) >= 0; })) return true;
+    if (dg.length >= 3 && g.phones.some(function (p) { return p.replace(/\D/g, '').indexOf(dg) >= 0; })) return true;
+    return g.cars.concat(g.names).some(function (s) { return s.toLowerCase().indexOf(low) >= 0; });
+  }
+  // ключ истории для записи из формы — чтобы открыть историю этой машины
+  function hKeyOf(coll, doc) {
+    var r = { plate: doc.plate || '', car: coll === 'clients' ? [doc.make, doc.model].filter(Boolean).join(' ') : doc.car || carOf(doc), phone: doc.phone || phoneOf(doc) };
+    if (coll === 'jobs' && doc.booking) { var b = S.D.bookings.find(function (x) { return x.id === doc.booking; }); if (b) { r.plate = r.plate || b.plate || ''; r.phone = r.phone || phoneOf(b); } }
+    return hKeys(r)[0] || '';
+  }
+  function hLabel(g) {
+    return (g.cars[0] ? '<b>' + h(g.cars.slice(0, 2).join(', ')) + '</b>' : '<b class="muted">марка не указана</b>') + g.plates.map(function (p) { return ' <span class="plate">' + h(p) + '</span>'; }).join('');
+  }
+  var HKIND = { job: 'Работа', bk: 'Запись', st: 'Хранение', pt: 'Покраска' };
+  V.history = function () {
+    var q = fv('hq', '').trim(), sel = fv('hSel', '');
+    var all = hGroups();
+    var g = sel ? all.find(function (x) { return x.keys[sel]; }) : null;
+    if (g) return hDetail(g);
+    var list = (q ? all.filter(function (x) { return hMatch(x, q); }) : all.filter(function (x) { return x.visits; }))
+      .sort(function (a, b) { return (b.last || '').localeCompare(a.last || '') || b.paid - a.paid; });
+    var shown = list.slice(0, q ? 200 : 50);
+    var tools = '<input class="in search" type="search" placeholder="Госномер, марка, телефон или имя" data-filter="hq" value="' + h(fv('hq', '')) + '">';
+    var cols = [{ t: 'Машина' }, { t: 'Клиент' }, { t: 'Телефон' }, { t: 'Визитов', r: 1 }, { t: 'Заплатил всего', r: 1 }, { t: 'Последний визит' }];
+    var rows = shown.map(function (x) {
+      var r = [hLabel(x), h(x.names.slice(0, 2).join(', ')), phoneLink(x.phones[0]), x.visits || '', x.paid ? '<b class="num">' + money(x.paid) + '</b>' : '', x.last ? dmy(x.last) : '<span class="muted">—</span>'];
+      r._open = 'hist:' + h(x.key); return r;
+    });
+    var hint = '<p class="muted" style="margin:-8px 0 16px">' + (q ? 'Найдено: ' + list.length + (list.length > shown.length ? ', показаны первые ' + shown.length : '') + '. Нажмите на машину, чтобы открыть историю.'
+      : 'Введите госномер, марку, телефон или имя. Пока поиск пуст, здесь машины с последними визитами.') + '</p>';
+    return top('История машины', tools) + hint + table(cols, rows);
+  };
+  function hDetail(g) {
+    var rs = g.recs, own = owner();
+    var svc = {}; rs.forEach(function (r) { if (r.k === 'job') jobLines(r.o).forEach(function (l) { if (l.service) svc[l.service] = (svc[l.service] || 0) + 1; }); });
+    var top3 = Object.keys(svc).sort(function (a, b) { return svc[b] - svc[a]; }).slice(0, 4);
+    var by = function (k) { return sum(rs.filter(function (r) { return r.k === k; }), 'sum'); };
+    var stats = [['Визитов', g.visits || 0], ['Заплатил всего', money(g.paid)], ['Средний чек', g.visits ? money(g.jobsSum / g.visits) : '—'], ['Последний визит', g.last ? dmy(g.last) : '—']];
+    var out = top('История · ' + (g.plates[0] || g.cars[0] || g.phones[0] || ''), '<button class="btn sec" type="button" data-hback>← Ко всем машинам</button>');
+    out += '<div class="card" style="margin-bottom:16px">' + hLabel(g) +
+      (g.names.length ? '<div>' + h(g.names.join(', ')) + '</div>' : '') +
+      (g.phones.length ? '<div>' + g.phones.map(phoneLink).join(', ') + '</div>' : '') +
+      (g.first ? '<div class="muted">Клиент с ' + dmy(g.first) + '</div>' : '') +
+      (top3.length ? '<div class="muted">Чаще всего: ' + top3.map(function (s) { return h(s) + (svc[s] > 1 ? ' ×' + svc[s] : ''); }).join(', ') + '</div>' : '') + '</div>';
+    out += '<div class="grid stats">' + stats.map(function (s, i) { return '<div class="stat"><span>' + s[0] + '</span><b' + (i === 3 ? ' style="font-size:.8em"' : '') + '>' + s[1] + '</b></div>'; }).join('') + '</div>';
+    var parts = [['Шиномонтаж и услуги', g.jobsSum], ['Хранение', by('st')], ['Покраска дисков', by('pt')]].filter(function (p) { return p[1]; });
+    if (parts.length > 1) out += '<p class="muted" style="margin:10px 0 0">' + parts.map(function (p) { return p[0] + ': ' + money(p[1]); }).join(' · ') + '</p>';
+    var cols = [{ t: 'Дата' }, { t: 'Что' }, { t: 'Машина' }, { t: 'Услуги' }, { t: 'Мастер' }, { t: 'Сумма', r: 1 }];
+    var rows = rs.map(function (r) {
+      var o = r.o, what = '', det = '', coll = { job: 'jobs', bk: 'bookings', st: 'storage', pt: 'paint' }[r.k];
+      if (r.k === 'job') { what = h(jobTitle(o)); det = (o.pay || '') + (o.comment ? ' · ' + o.comment : ''); }
+      if (r.k === 'bk') { what = h(o.service || 'без услуги'); det = (o.time || '') + (o.comment ? ' · ' + o.comment : ''); }
+      if (r.k === 'st') { what = 'Бирка № ' + o.id + ': ' + h([o.tires, o.size].filter(Boolean).join(' ')); det = stStatus(o) + (o.paid ? '' : ' · не оплачено'); }
+      if (r.k === 'pt') { what = 'П-' + o.id + ': ' + h(pDesc(o) + ', ' + (o.color || '')); det = o.status; }
+      var kind = r.k === 'bk' ? tag(o.status) : HKIND[r.k];
+      var row = [r.date ? dmy(r.date) : '<span class="muted">—</span>', kind, h(r.car) + (r.plate ? ' <span class="plate">' + h(r.plate) + '</span>' : ''), what + (det ? '<br><small class="muted">' + h(det) + '</small>' : ''), h(o.master || ''), r.sum ? '<b class="num">' + money(r.sum) + '</b>' : ''];
+      if (r.k === 'job' || r.k === 'bk' || own) row._open = coll + ':' + o.id;
+      return row;
+    });
+    out += '<h2 class="sec-title">Всё по порядку</h2>' + table(cols, rows, rs.length > 1 ? ['Итого', '', '', '', '', '<span class="num">' + money(g.paid) + '</span>'] : null);
+    if (g.recs.some(function (r) { return r.k === 'job' && !r.plate && !r.phone; }) && !g.plates.length && !g.phones.length)
+      out += '<p class="muted" style="margin-top:12px">У этих работ записана только марка, без госномера и телефона, поэтому сюда попадают все такие машины этой марки.</p>';
+    return out;
+  }
 
   V.clients = function () {
     var q = fv('cq', '').toLowerCase();
@@ -1366,6 +1481,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     M = { coll: coll, id: id || null, booking: !id && coll === 'jobs' ? doc.booking || 0 : 0, plate: coll === 'jobs' ? doc.plate || '' : '' };
     var F = FORMS[coll];
     var canDel = id && owner() && coll !== 'shop';
+    var hk = id && !booker() && ['jobs', 'bookings', 'clients', 'storage', 'paint'].indexOf(coll) >= 0 ? hKeyOf(coll, doc) : '';
     var title = id ? F.title[1] + (coll === 'storage' ? ' · бирка № ' + id : coll === 'paint' ? ' · № П-' + id : '') : F.title[0];
     if (coll === 'paint') { M.pending = []; M.saved = []; M.priceTouched = !!id; }
     var extra = '';
@@ -1388,6 +1504,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       '<p class="err" id="formErr" role="alert" hidden></p>' +
       '<div class="acts"><div>' + (canDel ? '<button type="button" class="btn sec" id="delBtn">Удалить</button>' : '') +
       (coll === 'bookings' && id && !booker() ? '<button type="button" class="btn sec" id="toJob">Записать работу</button>' : '') +
+      (hk ? '<button type="button" class="btn sec" data-hist="' + h(hk) + '">История</button>' : '') +
       (coll === 'storage' && id ? '<button type="button" class="btn sec" data-print="' + id + '">Квитанция</button>' : '') +
       (coll === 'paint' && id ? '<button type="button" class="btn sec" data-pprint="' + id + '">Квитанция и бирка</button>' : '') +
       (coll === 'jobs' && id && owner() && doc.pay === 'Безнал' && doc.company ? (jobInvoice(id) ? '<button type="button" class="btn sec" data-iprint="' + jobInvoice(id).id + '">Счёт № ' + jobInvoice(id).id + '</button>' : '<button type="button" class="btn sec" data-jinv="' + id + '">Выписать счёт</button>') : '') + '</div>' +
@@ -1710,7 +1827,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     var t = e.target.closest('button, tr.click, a, .pc'); if (!t) return;
     var d = t.dataset;
     if (d.logre != null) { LOG.key = ''; render(); return; }
-    if (d.view) { if (d.view === 'log') LOG.key = ''; S.view = d.view; menu(false); render(); window.scrollTo(0, 0); return; }
+    if (d.view) { if (d.view === 'log') LOG.key = ''; if (d.view === 'history') S.f.hSel = ''; S.view = d.view; menu(false); render(); window.scrollTo(0, 0); return; }
     if (d.close != null) { closeModal(); return; }
     if (d.refresh != null) { menu(false); load(true).then(function () { toast('Данные обновлены'); }); return; }
     if (d.sell) { openSell(Number(d.sell)); return; }
@@ -1756,7 +1873,9 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       save('storage', s.id, Object.assign({}, s, { issued: today() })).then(function () { render(); toast('Отмечено: выдано'); }).catch(function (er) { toast(errText(er)); });
       return;
     }
-    if (d.open && !e.target.closest('select, a, button')) { var p = d.open.split(':'); openForm(p[0], Number(p[1])); }
+    if (d.hback != null) { S.f.hSel = ''; render(); window.scrollTo(0, 0); return; }
+    if (d.hist != null) { if (M && M.dirty && !confirm('Изменения не сохранены. Всё равно открыть историю?')) return; closeModal(); S.view = 'history'; S.f.hSel = d.hist; render(); window.scrollTo(0, 0); return; }
+    if (d.open && !e.target.closest('select, a, button')) { var p = d.open.split(':'); if (p[0] === 'hist') { S.f.hSel = d.open.slice(5); render(); window.scrollTo(0, 0); return; } openForm(p[0], Number(p[1])); }
   });
   document.addEventListener('change', function (e) {
     var t = e.target;
