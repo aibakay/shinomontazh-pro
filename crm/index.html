@@ -417,6 +417,17 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
   .label .co{font:900 40pt/1.05 Arial,sans-serif}
   @page{margin:14mm}
 }
+/* журнал на телефоне: фильтры переносятся, «Что сделал» и «Подробности» — подпись сверху, текст под ней слева */
+.lg-ch i,.lg-ch span{display:block}
+.lg-ch span+span{margin-top:2px}
+@media (max-width:900px){
+  .tools .seg{flex-wrap:wrap;max-width:100%;border-radius:18px}
+  .tbl.lgt td:nth-child(n+3){display:block;text-align:left;grid-column:1/-1}
+  .tbl.lgt td:nth-child(n+3)::before{display:block;margin-bottom:4px;padding-top:0}
+  .tbl.lgt td:nth-child(3) .tag{margin-right:4px}
+  .tbl.lgt .lg-t{display:block;font-size:15px;line-height:1.35}
+  .tbl.lgt .lg-ch{margin-top:6px;padding:8px 10px;background:var(--soft);border-radius:10px;font-size:14px;line-height:1.4}
+}
 </style>
 </head>
 <body>
@@ -696,14 +707,14 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
   function top(title, tools) { return '<div class="top"><h1>' + title + '</h1><div class="tools">' + (tools || '') + '</div></div>'; }
   // содержимое ячейки одним блоком: на телефоне не разъезжается в строку и переносится
   function cellV(v) { return v == null || v === '' ? '' : '<div class="v">' + v + '</div>'; }
-  function table(cols, rows, foot) {
+  function table(cols, rows, foot, cls) {
     if (!rows.length) return '<div class="card empty">Пока пусто.</div>';
     var hd = cols.map(function (c) { return '<th' + (c.r ? ' class="r"' : '') + '>' + c.t + '</th>'; }).join('');
     var bd = rows.map(function (r) {
       return '<tr' + (r._open ? ' class="click" data-open="' + r._open + '"' : '') + '>' + cols.map(function (c, i) { var v = r[i]; return '<td data-l="' + h(c.t) + '"' + (c.r ? ' class="r"' : '') + '>' + cellV(v) + '</td>'; }).join('') + '</tr>';
     }).join('');
     var ft = foot ? '<tfoot><tr>' + foot.map(function (v, i) { return '<td data-l="' + h(cols[i].t) + '"' + (cols[i].r ? ' class="r"' : '') + '>' + cellV(v) + '</td>'; }).join('') + '</tr></tfoot>' : '';
-    return '<div style="overflow-x:auto"><table class="tbl"><thead><tr>' + hd + '</tr></thead><tbody>' + bd + '</tbody>' + ft + '</table></div>';
+    return '<div style="overflow-x:auto"><table class="tbl' + (cls ? ' ' + cls : '') + '"><thead><tr>' + hd + '</tr></thead><tbody>' + bd + '</tbody>' + ft + '</table></div>';
   }
   function dateNav(key, val) {
     return '<button class="btn sec small" type="button" data-shift="' + key + '" data-n="-1" aria-label="Предыдущий день">←</button>' +
@@ -1161,7 +1172,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     var rows = list.slice(0, n).map(function (x) {
       var k = LKIND[x.kind] || [x.kind || '', ''];
       // добавлено и удалено — всё содержимое записи, изменено — что было и что стало
-      var det = '<b class="lg-t">' + h(x.text || '') + '</b>' + (x.ch && x.ch.length ? '<small class="muted lg-ch">' + (x.kind === 'del' ? '<i>Что было удалено:</i><br>' : x.kind === 'add' ? '<i>Что внесли:</i><br>' : '') + x.ch.map(h).join('<br>') + '</small>' : '') +
+      var det = '<b class="lg-t">' + h(x.text || '') + '</b>' + (x.ch && x.ch.length ? '<small class="muted lg-ch">' + (x.kind === 'del' ? '<i>Что было удалено:</i>' : x.kind === 'add' ? '<i>Что внесли:</i>' : '') + x.ch.map(function (c) { return '<span>' + h(c) + '</span>'; }).join('') + '</small>' : '') +
         (x.ip && x.kind === 'fail' ? '<small class="muted lg-ch">адрес ' + h(x.ip) + '</small>' : '');
       return ['<span class="num">' + stamp(x.at) + '</span>', x.who ? '<b>' + h(x.who) + '</b>' : '<span class="muted">Неизвестный</span>',
         '<span class="tag ' + k[1] + '">' + k[0] + '</span> ' + h(x.title || ''), det];
@@ -1177,7 +1188,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
         '<input class="in search" type="search" placeholder="Поиск: госномер, услуга, имя" data-filter="lgq" value="' + h(fv('lgq', '')) + '"></div>' +
       (LOG.err ? '<p class="note">' + h(LOG.err) + '</p>' : '') +
       (LOG.list === null ? '<div class="card empty">Загружаю журнал…</div>' :
-        !list.length ? '<div class="card empty">' + (all.length ? 'По этим условиям ничего нет.' : 'За эти дни действий нет.') + '</div>' : table(cols, rows)) +
+        !list.length ? '<div class="card empty">' + (all.length ? 'По этим условиям ничего нет.' : 'За эти дни действий нет.') + '</div>' : table(cols, rows, null, 'lgt')) +
       (list.length > n ? '<p style="margin:14px 0"><button class="btn sec" type="button" data-seg="lgN" data-v="' + (n + 200) + '">Показать ещё (осталось ' + (list.length - n) + ')</button></p>' : '') +
       (LOG.more ? '<p class="note" style="margin-top:14px">Показаны последние 3000 действий за период. Чтобы увидеть более ранние, сузьте даты.</p>' : '') +
       '<p class="muted" style="margin:14px 0 0;font-size:14px">Журнал видит только владелец. Записи хранятся ' + LOG.keep + ' дней, изменить или удалить их из CRM нельзя.</p>';
