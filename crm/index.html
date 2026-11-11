@@ -1440,8 +1440,8 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       '<table class="tot"><tr><td>Итого:</td><td>' + rub(total) + '</td></tr><tr><td>' + (rate ? 'В том числе НДС (' + rate + '%):' : 'Без налога (НДС)') + '</td><td>' + (rate ? rub(vat) : '—') + '</td></tr></table>' +
       '<p>Всего оказано услуг ' + js.length + ', на сумму ' + rub(total) + ' руб.<br><b>' + rubWords(total) + '</b></p>' +
       '<p>Вышеперечисленные услуги выполнены полностью и в срок. Заказчик претензий по объёму, качеству и срокам оказания услуг не имеет.</p>' +
-      '<div class="sign act"><div><b>Исполнитель</b><br><br>' + (ip ? 'ИП ' : '') + '____________________ ' + h(s.head || '') + '<br><small>М. П.</small></div>' +
-      '<div><b>Заказчик</b><br><br>____________________ ' + h(c.contact || '') + '<br><small>М. П.</small></div></div></div>';
+      '<div class="sign act"><div><b>Исполнитель</b><br><br>' + (ip ? 'Индивидуальный предприниматель' : '____________________') + '<br><small>должность</small><br><br>____________________ / ' + (h(s.head || '') || '____________________') + '<br><small>подпись / расшифровка подписи</small><br><small>М. П. (при наличии)</small></div>' +
+      '<div><b>Заказчик</b><br><br>____________________<br><small>должность</small><br><br>____________________ / ' + (h(c.contact || '') || '____________________') + '<br><small>подпись / расшифровка подписи</small><br><small>М. П. (при наличии)</small></div></div></div>';
     window.print();
   }
 
