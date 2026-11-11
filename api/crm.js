@@ -166,7 +166,7 @@ module.exports = async function handler(req, res) {
       const re = /^\d{4}-\d{2}-\d{2}$/, from = String(b.from || ''), to = String(b.to || '');
       if (!re.test(from) || !re.test(to) || isNaN(Date.parse(from)) || isNaN(Date.parse(to)) || from > to || Date.parse(to) - Date.parse(from) > 92 * 864e5) return send(res, 400, { ok: false, error: 'body' });
       const lg = await log.read(from, to);
-      return send(res, 200, { ok: true, list: lg.list, more: lg.more, keep: log.KEEP_DAYS });
+      return send(res, 200, { ok: true, list: lg.list, more: lg.more, keep: log.KEEP_DAYS, sections: log.SECTIONS });
     }
 
     // Разовый перенос базы с ПК (файл .data/crm.json): только владелец и только пока в облаке нет своих записей
@@ -217,7 +217,7 @@ module.exports = async function handler(req, res) {
       let job;
       try { job = await store.insert('jobs', c.data); }
       catch (e) { await store.update('tires', tid, tire); throw e; }
-      await log.add({ who: me, role: role, kind: 'add', title: 'Продажа б/у шин', text: log.describe('jobs', job), coll: 'jobs', rid: job.id });
+      await log.add({ who: me, role: role, kind: 'add', title: 'Продажа б/у шин', text: log.describe('jobs', job), ch: log.snapshot('jobs', job).concat(['Остаток на складе: ' + ((t2.qty || 0) - (t2.sold || 0)) + ' шт.']), coll: 'jobs', rid: job.id });
       return send(res, 200, { ok: true, tire: t2, job: job });
     }
 
@@ -238,6 +238,7 @@ module.exports = async function handler(req, res) {
         const doc = await store.insert(pc, { img: img, at: new Date().toISOString() });
         n = (await store.list(pc)).length;
         const o2 = await store.update('paint', pid, Object.assign({}, order, { photos: n }));
+        await log.add({ who: me, role: role, kind: 'add', title: 'Фото дисков добавлено', text: log.describe('paint', order) + ' · фото: ' + n, coll: 'paint', rid: pid });
         return send(res, 200, { ok: true, photo: doc, doc: o2 });
       }
       const phid = Number(b.id);
@@ -245,6 +246,7 @@ module.exports = async function handler(req, res) {
       await store.remove(pc, phid);
       n = (await store.list(pc)).length;
       const o3 = await store.update('paint', pid, Object.assign({}, order, { photos: n }));
+      await log.add({ who: me, role: role, kind: 'del', title: 'Фото дисков удалено', text: log.describe('paint', order) + ' · осталось фото: ' + n, coll: 'paint', rid: pid });
       return send(res, 200, { ok: true, doc: o3 });
     }
 
@@ -362,6 +364,7 @@ module.exports = async function handler(req, res) {
         // реквизиты мастерской — одна запись на всю CRM
         const sh = (await store.list('shop'))[0];
         const doc = sh ? await store.update('shop', sh.id, data) : await store.insert('shop', data);
+        await log.change(me, role, 'shop', sh || null, doc);
         return send(res, 200, { ok: true, doc: doc });
       }
       if (coll === 'invoices') {
@@ -409,6 +412,7 @@ module.exports = async function handler(req, res) {
       await log.change(me, role, coll, prev, doc);
       let bk = null;
       if (booking && booking.status !== 'Приехал') bk = await store.update('bookings', booking.id, Object.assign({}, booking, { status: 'Приехал' }));
+      if (bk) await log.change(me, role, 'bookings', booking, bk);
       if (bk) return send(res, 200, { ok: true, doc: doc, booking: bk });
       if (coll === 'staff') return send(res, 200, { ok: true, doc: { id: doc.id, name: doc.name, access: doc.access || 'Мастер' } });
       return send(res, 200, { ok: true, doc: doc });

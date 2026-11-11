@@ -136,7 +136,9 @@ input.plate::placeholder{font-family:var(--text);font-weight:400;letter-spacing:
 .tbl{width:100%;border-collapse:collapse;background:var(--card);border-radius:14px;overflow:hidden}
 .tbl th{font-size:12px;font-weight:600;color:var(--muted);text-align:left;padding:10px 12px;background:#faf9f7;white-space:nowrap}
 .tbl td{padding:10px 12px;border-top:1px solid var(--line);vertical-align:middle}
-.lg-ch{display:block;margin-top:3px;font-size:13px;line-height:1.4}
+.lg-t{font-weight:600}
+.lg-ch{display:block;margin-top:3px;font-size:13px;line-height:1.45}
+.lg-ch i{font-style:normal;font-weight:600}
 .tbl tr.click{cursor:pointer}
 .tbl tr.click:hover td{background:#faf9f7}
 .tbl .r{text-align:right}
@@ -1008,11 +1010,11 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
   };
 
   // ---------- журнал действий (только владелец): кто и когда вошёл, что добавил, изменил, удалил
-  var LOG = { key: '', list: null, err: '', more: false, keep: 90 };
+  var LOG = { key: '', list: null, err: '', more: false, keep: 90, sec: {} };
   var LKIND = { 'in': ['Вход', 't-info'], out: ['Выход', ''], fail: ['Неверный вход', 't-bad'], add: ['Добавлено', 't-ok'], edit: ['Изменено', 't-warn'], del: ['Удалено', 't-bad'] };
   function logLoad(from, to) {
     var key = from + '|' + to; LOG.key = key; LOG.list = null; LOG.err = '';
-    api('log', { from: from, to: to }).then(function (j) { if (LOG.key !== key) return; LOG.list = j.list || []; LOG.more = !!j.more; LOG.keep = j.keep || 90; if (S.view === 'log') render(); })
+    api('log', { from: from, to: to }).then(function (j) { if (LOG.key !== key) return; LOG.list = j.list || []; LOG.more = !!j.more; LOG.keep = j.keep || 90; LOG.sec = j.sections || {}; if (S.view === 'log') render(); })
       .catch(function (e) { if (LOG.key !== key) return; LOG.list = []; LOG.err = errText(e); if (S.view === 'log') render(); });
   }
   function logWho(x) { return x.who || 'Неизвестный'; }
@@ -1021,15 +1023,20 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     if (from > to) { tmp = from; from = to; to = tmp; }
     if (daysBetween(from, to) > 92) from = addDays(to, -92);
     if (LOG.key !== from + '|' + to) logLoad(from, to);
-    var kind = fv('lgKind', 'all'), who = fv('lgWho', ''), q = fv('lgq', '').toLowerCase().trim(), all = LOG.list || [];
+    var kind = fv('lgKind', 'all'), who = fv('lgWho', ''), sec = fv('lgSec', ''), q = fv('lgq', '').toLowerCase().trim(), all = LOG.list || [];
     var names = {}; all.forEach(function (x) { names[logWho(x)] = 1; });
     (S.D.staff || []).forEach(function (s) { names[s.name] = 1; }); names['Владелец'] = 1;
     var opts = Object.keys(names).sort(function (a, b) { return a.localeCompare(b, 'ru'); });
     if (who && opts.indexOf(who) < 0) who = '';
+    var secs = {}; all.forEach(function (x) { if (x.coll && LOG.sec[x.coll]) secs[LOG.sec[x.coll]] = 1; });
+    var sopts = Object.keys(secs).sort(function (a, b) { return a.localeCompare(b, 'ru'); });
+    if (sec && sopts.indexOf(sec) < 0) sec = '';
     var list = all.filter(function (x) {
       if (who && logWho(x) !== who) return false;
       if (kind === 'io' && ['in', 'out', 'fail'].indexOf(x.kind) < 0) return false;
-      if (kind === 'ch' && ['add', 'edit'].indexOf(x.kind) < 0) return false;
+      if (sec && LOG.sec[x.coll] !== sec) return false;
+      if (kind === 'add' && x.kind !== 'add') return false;
+      if (kind === 'ch' && x.kind !== 'edit') return false;
       if (kind === 'del' && x.kind !== 'del') return false;
       if (q && [x.who, x.title, x.text, (x.ch || []).join(' ')].join(' ').toLowerCase().indexOf(q) < 0) return false;
       return true;
@@ -1037,7 +1044,8 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     var n = Number(fv('lgN', 200)), cols = [{ t: 'Когда' }, { t: 'Кто' }, { t: 'Что сделал' }, { t: 'Подробности' }];
     var rows = list.slice(0, n).map(function (x) {
       var k = LKIND[x.kind] || [x.kind || '', ''];
-      var det = h(x.text || '') + (x.ch && x.ch.length ? '<small class="muted lg-ch">' + x.ch.map(h).join('<br>') + '</small>' : '') +
+      // добавлено и удалено — всё содержимое записи, изменено — что было и что стало
+      var det = '<b class="lg-t">' + h(x.text || '') + '</b>' + (x.ch && x.ch.length ? '<small class="muted lg-ch">' + (x.kind === 'del' ? '<i>Что было удалено:</i><br>' : x.kind === 'add' ? '<i>Что внесли:</i><br>' : '') + x.ch.map(h).join('<br>') + '</small>' : '') +
         (x.ip && x.kind === 'fail' ? '<small class="muted lg-ch">адрес ' + h(x.ip) + '</small>' : '');
       return ['<span class="num">' + stamp(x.at) + '</span>', x.who ? '<b>' + h(x.who) + '</b>' : '<span class="muted">Неизвестный</span>',
         '<span class="tag ' + k[1] + '">' + k[0] + '</span> ' + h(x.title || ''), det];
@@ -1047,7 +1055,9 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
         '<button class="btn sec" type="button" data-logre>Обновить</button>') +
       '<div class="tools" style="margin:-6px 0 14px"><select class="in" data-fsel="lgWho" aria-label="Сотрудник"><option value="">Все сотрудники</option>' +
         opts.map(function (o) { return '<option' + (o === who ? ' selected' : '') + '>' + h(o) + '</option>'; }).join('') + '</select>' +
-        seg('lgKind', kind, [['all', 'Всё'], ['io', 'Входы'], ['ch', 'Правки'], ['del', 'Удаления']]) +
+        '<select class="in" data-fsel="lgSec" aria-label="Раздел"><option value="">Все разделы</option>' +
+        sopts.map(function (o) { return '<option' + (o === sec ? ' selected' : '') + '>' + h(o) + '</option>'; }).join('') + '</select>' +
+        seg('lgKind', kind, [['all', 'Всё'], ['add', 'Добавил'], ['ch', 'Изменил'], ['del', 'Удалил'], ['io', 'Входы']]) +
         '<input class="in search" type="search" placeholder="Поиск: госномер, услуга, имя" data-filter="lgq" value="' + h(fv('lgq', '')) + '"></div>' +
       (LOG.err ? '<p class="note">' + h(LOG.err) + '</p>' : '') +
       (LOG.list === null ? '<div class="card empty">Загружаю журнал…</div>' :

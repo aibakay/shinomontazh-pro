@@ -6,6 +6,7 @@
 
 // Если подключена база CRM, заявка ещё и попадает в раздел «Запись» со статусом «Новая».
 const store = require('./_lib/store');
+const log = require('./_lib/log'); // журнал действий: заявка с сайта попадает туда от имени «Сайт»
 
 const hits = new Map(); // защита от спама: не больше 5 заявок с одного адреса за 10 минут
 const WINDOW_MS = 10 * 60 * 1000;
@@ -69,12 +70,13 @@ module.exports = async function handler(req, res) {
         !lead.date && lead.day ? 'когда удобно: ' + lead.day : '',
         lead.comment
       ].filter(Boolean).join('. ');
-      await store.insert('bookings', {
+      const bk = await store.insert('bookings', {
         date: lead.date, time: /^([01]\d|2[0-3]):[0-5]\d$/.test(lead.time) ? lead.time : '',
         plate: '', name: lead.name, phone: phone, service: lead.service, status: 'Новая',
         comment: notes.slice(0, 600), source: 'site', created: new Date().toISOString()
       });
       savedToCrm = true;
+      await log.change('Сайт', 'site', 'bookings', null, bk);
     } catch (e) {
       console.error('Заявка не сохранилась в CRM', e);
     }
