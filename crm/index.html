@@ -520,7 +520,8 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
   var S = { role: null, D: null, view: 'today', f: {} };
   var VIEWS = [
     ['today', 'Сегодня'], ['bookings', 'Запись'], ['schedule', 'Расписание'], ['jobs', 'Работы'], ['history', 'История'],
-    ['clients', 'Клиенты', true], ['storage', 'Хранение', true], ['tires', 'Б/у шины', true], ['paint', 'Покраска', true], ['companies', 'Безнал', true], ['report', 'Отчёт', true], ['prices', 'Прайс'], ['staff', 'Сотрудники', true], ['log', 'Журнал', true]
+    ['clients', 'Клиенты', true], ['storage', 'Хранение', true], ['tires', 'Б/у шины', true], ['paint', 'Покраска', true], ['companies', 'Безнал', true], ['report', 'Отчёт', true], ['prices', 'Прайс'], ['staff', 'Сотрудники', true], ['log', 'Журнал', true],
+    ['plates', 'Проверка госномеров', true, 'hidden'] // не в меню: кнопка в «Клиентах» и «Журнале»
   ];
 
   // ---------- мелочи
@@ -724,7 +725,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
   function render() {
     if (!S.D) return;
     if (!VIEWS.some(function (v) { return v[0] === S.view && canSee(v); })) S.view = booker() ? 'schedule' : 'today';
-    $('nav').innerHTML = VIEWS.filter(canSee).map(function (v) {
+    $('nav').innerHTML = VIEWS.filter(function (v) { return canSee(v) && !v[3]; }).map(function (v) {
       var badge = v[0] === 'bookings' && newCount() ? '<b>' + newCount() + '</b>' : '';
       return '<button type="button" data-view="' + v[0] + '"' + (S.view === v[0] ? ' aria-current="page"' : '') + '>' + v[1] + badge + '</button>';
     }).join('');
@@ -1056,13 +1057,13 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     var q = fv('cq', '').toLowerCase();
     var list = S.D.clients.filter(function (c) { return !q || [c.plate, c.name, c.phone, c.make, c.model].join(' ').toLowerCase().indexOf(q) >= 0; })
       .map(function (c) {
-        var js = S.D.jobs.filter(function (j) { return j.plate === c.plate; });
+        var js = c.plate ? S.D.jobs.filter(function (j) { return j.plate === c.plate; }) : [];
         var last = js.reduce(function (m, j) { return j.date > m ? j.date : m; }, '');
-        var st = S.D.storage.filter(function (s) { return s.plate === c.plate && !s.issued; }).length;
+        var st = c.plate ? S.D.storage.filter(function (s) { return s.plate === c.plate && !s.issued; }).length : 0;
         return { c: c, visits: cars(js), spent: sum(js, 'sum'), last: last, st: st };
       }).sort(function (a, b) { return (b.last || '').localeCompare(a.last || '') || b.c.id - a.c.id; });
     var cols = [{ t: 'Госномер' }, { t: 'Имя' }, { t: 'Телефон' }, { t: 'Машина' }, { t: 'Шины' }, { t: 'Визитов', r: 1 }, { t: 'Потратил', r: 1 }, { t: 'Последний визит' }].concat(owner() ? [{ t: 'На хранении', r: 1 }] : []);
-    return top('Клиенты · ' + S.D.clients.length, '<input class="in search" type="search" placeholder="Поиск: номер, имя, телефон, марка" data-filter="cq" value="' + h(fv('cq', '')) + '"><button class="btn" type="button" data-new="clients">+ Клиент</button>') +
+    return top('Клиенты · ' + S.D.clients.length, '<input class="in search" type="search" placeholder="Поиск: номер, имя, телефон, марка" data-filter="cq" value="' + h(fv('cq', '')) + '"><button class="btn sec" type="button" data-view="plates">Проверить госномера</button><button class="btn" type="button" data-new="clients">+ Клиент</button>') +
       table(cols, list.map(function (x) {
         var c = x.c, r = ['<span class="plate">' + h(c.plate) + '</span>', h(c.name), phoneLink(c.phone), h([c.make, c.model].filter(Boolean).join(' ')), h(c.size), x.visits || '', x.spent ? '<span class="num">' + money(x.spent) + '</span>' : '', x.last ? dmy(x.last) : ''].concat(owner() ? [x.st || ''] : []);
         r._open = 'clients:' + c.id; return r;
@@ -1370,7 +1371,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     });
     return top('Журнал', '<input class="in" type="date" data-date="lgFrom" value="' + from + '" max="' + t + '" aria-label="С даты"><span class="muted">—</span>' +
         '<input class="in" type="date" data-date="lgTo" value="' + to + '" max="' + t + '" aria-label="По дату">' +
-        '<button class="btn sec" type="button" data-logre>Обновить</button>') +
+        '<button class="btn sec" type="button" data-logre>Обновить</button><button class="btn sec" type="button" data-view="plates">Проверить госномера</button>') +
       '<div class="tools" style="margin:-6px 0 14px"><select class="in" data-fsel="lgWho" aria-label="Сотрудник"><option value="">Все сотрудники</option>' +
         opts.map(function (o) { return '<option' + (o === who ? ' selected' : '') + '>' + h(o) + '</option>'; }).join('') + '</select>' +
         '<select class="in" data-fsel="lgSec" aria-label="Раздел"><option value="">Все разделы</option>' +
@@ -1383,6 +1384,48 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       (list.length > n ? '<p style="margin:14px 0"><button class="btn sec" type="button" data-seg="lgN" data-v="' + (n + 200) + '">Показать ещё (осталось ' + (list.length - n) + ')</button></p>' : '') +
       (LOG.more ? '<p class="note" style="margin-top:14px">Показаны последние 3000 действий за период. Чтобы увидеть более ранние, сузьте даты.</p>' : '') +
       '<p class="muted" style="margin:14px 0 0;font-size:14px">Журнал видит только владелец. Записи хранятся ' + LOG.keep + ' дней, изменить или удалить их из CRM нельзя.</p>';
+  };
+
+
+  // ---------- проверка госномеров (только владелец): что записали в «Госномер» вместо номера — в марку, имя или телефон
+  // Список и подсказки «куда» даёт сервер; владелец правит, отмечает и переносит. Каждая правка идёт в журнал.
+  var PL = { list: null, opts: {}, st: {}, err: '', busy: false };
+  var PLSEC = { bookings: 'Запись', jobs: 'Работа', clients: 'Клиент', storage: 'Хранение', paint: 'Покраска' };
+  function plKey(x) { return x.coll + ':' + x.id; }
+  function plLoad() {
+    PL.busy = true; PL.err = '';
+    api('plates').then(function (j) {
+      PL.list = j.list || []; PL.opts = j.opts || {}; PL.st = {};
+      PL.list.forEach(function (x) { PL.st[plKey(x)] = { on: x.kind === 'bad', to: x.to, text: x.text }; });
+      PL.busy = false; if (S.view === 'plates') render();
+    }).catch(function (e) { PL.list = []; PL.err = errText(e); PL.busy = false; if (S.view === 'plates') render(); });
+  }
+  function plPicked() { return (PL.list || []).filter(function (x) { var st = PL.st[plKey(x)]; return st.on && st.to !== 'keep'; }); }
+  V.plates = function () {
+    if (PL.list === null && !PL.busy) plLoad();
+    var out = top('Проверка госномеров', '<button class="btn sec" type="button" data-view="clients">← Клиенты</button><button class="btn sec" type="button" data-plre>Проверить заново</button>');
+    out += '<p class="muted" style="margin:-8px 0 14px">Здесь всё, что записано в поле «Госномер», но на номер не похоже: марка, имя, телефон. Посмотрите, куда перенести, при необходимости поправьте текст и нажмите «Перенести». Госномер в этих записях станет пустым, значение перейдёт в выбранное поле. Если там уже что-то есть, оно не затрётся — новое допишется через запятую. Все изменения видны в «Журнале».</p>';
+    if (PL.err) return out + '<p class="note">' + h(PL.err) + '</p>';
+    if (PL.list === null) return out + '<div class="card empty">Проверяю госномера…</div>';
+    if (!PL.list.length) return out + '<div class="card empty">Все госномера похожи на номера. Переносить нечего.</div>';
+    var mode = fv('plMode', 'bad'), nb = PL.list.filter(function (x) { return x.kind === 'bad'; }).length, no = PL.list.length - nb;
+    var list = PL.list.filter(function (x) { return mode === 'all' || x.kind === mode; });
+    out += '<div class="tools" style="margin:-6px 0 14px">' + seg('plMode', mode, [['bad', 'Не номер · ' + nb], ['odd', 'Номер с ошибкой · ' + no], ['all', 'Все · ' + PL.list.length]]) +
+      '<button class="btn sec small" type="button" data-plall="1">Отметить все</button><button class="btn sec small" type="button" data-plall="0">Снять все</button></div>';
+    if (mode === 'odd') out += '<p class="note">Тут номера, похожие на настоящие, но неполные или с ошибкой (например, без региона). Их по умолчанию не трогаем — исправьте в самой записи или отметьте, если это не номер.</p>';
+    var rows = list.map(function (x) {
+      var k = plKey(x), st = PL.st[k], opts = PL.opts[x.coll] || [];
+      return ['<input type="checkbox" data-plon="' + k + '"' + (st.on ? ' checked' : '') + ' aria-label="Перенести">',
+        '<b>' + PLSEC[x.coll] + '</b><br><small class="muted">' + h(x.what) + '</small>',
+        '<span class="plate">' + h(x.plate) + '</span>',
+        '<select class="in" data-plto="' + k + '" aria-label="Куда перенести">' + opts.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === st.to ? ' selected' : '') + '>' + h(o[1]) + '</option>'; }).join('') + '</select>',
+        st.to === 'keep' || st.to === 'clear' ? '<span class="muted">' + (st.to === 'keep' ? 'не меняем' : 'госномер станет пустым') + '</span>' :
+          '<input class="in" data-plt="' + k + '" value="' + h(st.text) + '" maxlength="120" aria-label="Что запишется">' + (x.client ? '<br><small class="muted">+ пустые имя и телефон возьмём из карточки клиента</small>' : '')];
+    });
+    out += rows.length ? table([{ t: '' }, { t: 'Где' }, { t: 'Сейчас в госномере' }, { t: 'Куда' }, { t: 'Что запишется' }], rows, null, 'plt') : '<div class="card empty">' + (mode === 'bad' ? 'Всё, что не похоже на номер, уже разобрано.' : 'Здесь ничего нет.') + '</div>';
+    var n = plPicked().length;
+    out += '<p style="margin:16px 0"><button class="btn" type="button" data-plgo' + (n ? '' : ' disabled') + '>Перенести отмеченные · ' + n + '</button></p>';
+    return out;
   };
 
   V.staff = function () {
@@ -1793,8 +1836,8 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     var first = form.querySelector('input:not([type=checkbox]),select'); if (first && !id) setTimeout(function () { first.focus(); }, 40);
   }
   function clientHistory(c) {
-    var js = S.D.jobs.filter(function (j) { return j.plate === c.plate; }).sort(function (a, b) { return b.date.localeCompare(a.date); });
-    var st = S.D.storage.filter(function (s) { return s.plate === c.plate; });
+    var js = S.D.jobs.filter(function (j) { return c.plate && j.plate === c.plate; }).sort(function (a, b) { return b.date.localeCompare(a.date); });
+    var st = S.D.storage.filter(function (s) { return c.plate && s.plate === c.plate; });
     if (!js.length && !st.length) return '';
     return '<div class="hint" style="margin:0 0 14px"><b>История.</b> ' + (js.length ? js.slice(0, 6).map(function (j) { return dmy(j.date) + ' — ' + h(j.service) + ', ' + money(j.sum); }).join('; ') + (js.length > 6 ? '; ещё ' + (js.length - 6) : '') : 'работ нет') +
       (st.length ? '<br>Хранение: ' + st.map(function (s) { return 'бирка № ' + s.id + ' (' + stStatus(s).toLowerCase() + ')'; }).join(', ') : '') + '</div>';
@@ -2079,7 +2122,18 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     var t = e.target.closest('button, tr.click, a, .pc'); if (!t) return;
     var d = t.dataset;
     if (d.logre != null) { LOG.key = ''; render(); return; }
-    if (d.view) { if (d.view === 'log') LOG.key = ''; if (d.view === 'history') S.f.hSel = ''; S.view = d.view; menu(false); render(); window.scrollTo(0, 0); return; }
+    if (d.plre != null) { PL.list = null; render(); return; }
+    if (d.plall != null) { (PL.list || []).forEach(function (x) { if (fv('plMode', 'bad') === 'all' || x.kind === fv('plMode', 'bad')) PL.st[plKey(x)].on = d.plall === '1'; }); render(); return; }
+    if (d.plgo != null) {
+      var pick = plPicked();
+      if (!pick.length || !confirm('Перенести ' + pick.length + ' значений из поля «Госномер»? Госномер в этих записях станет пустым. Всё будет записано в журнал.')) return;
+      t.disabled = true;
+      api('plates', { apply: pick.map(function (x) { var st = PL.st[plKey(x)]; return { coll: x.coll, id: x.id, plate: x.plate, to: st.to, text: st.text }; }) })
+        .then(function (j) { toast('Перенесено: ' + j.done + (j.skipped ? ', пропущено: ' + j.skipped : '')); PL.list = null; return load(true); })
+        .catch(function (er) { toast(errText(er)); render(); });
+      return;
+    }
+    if (d.view) { if (d.view === 'log') LOG.key = ''; if (d.view === 'plates') PL.list = null; if (d.view === 'history') S.f.hSel = ''; S.view = d.view; menu(false); render(); window.scrollTo(0, 0); return; }
     if (d.close != null) { closeModal(); return; }
     if (d.refresh != null) { menu(false); load(true).then(function () { toast('Данные обновлены'); }); return; }
     if (d.sell) { openSell(Number(d.sell)); return; }
@@ -2148,6 +2202,8 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     }
     if (t.dataset.date) { S.f[t.dataset.date] = t.value || today(); render(); }
     if (t.dataset.fsel) { S.f[t.dataset.fsel] = t.value; render(); }
+    if (t.dataset.plon) { PL.st[t.dataset.plon].on = t.checked; render(); }
+    if (t.dataset.plto) { var ps = PL.st[t.dataset.plto]; ps.to = t.value; if (t.value !== 'keep') ps.on = true; render(); }
     if (t.id === 'pctIn') {
       var st = S.D.settings[0], v = Math.max(0, Math.min(100, Math.round(Number(t.value) || 0)));
       save('settings', st.id, { masterPct: v }).then(function () { render(); toast('Процент мастера: ' + v + '%'); }).catch(function (er) { toast(errText(er)); });
@@ -2155,6 +2211,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
   });
   document.addEventListener('input', function (e) {
     var t = e.target;
+    if (t.dataset.plt) { PL.st[t.dataset.plt].text = t.value; return; }
     if (t.dataset.filter) {
       S.f[t.dataset.filter] = t.value;
       var pos = t.selectionStart; render();

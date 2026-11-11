@@ -8,6 +8,7 @@ const store = require('./_lib/store');
 const auth = require('./_lib/auth');
 const schema = require('./_lib/schema');
 const log = require('./_lib/log'); // журнал действий: кто что сделал (видит только владелец)
+const plates = require('./_lib/plates'); // проверка госномеров: что не номер — в марку, имя или телефон
 const { PRICES } = require('./_lib/seed');
 
 const COLLS = Object.keys(schema.SCHEMA).filter(function (c) { return c[0] !== '_'; });
@@ -194,6 +195,44 @@ module.exports = async function handler(req, res) {
       await store.replaceAll('prices', docs, docs.length);
       await log.add({ who: me, role: role, kind: 'edit', title: 'Прайс заменён печатным', text: docs.length + ' услуг' });
       return send(res, 200, { ok: true, prices: docs.length });
+    }
+
+    // Проверка госномеров (только владелец). Без apply — список: что в поле «Госномер» не похоже на номер и куда его лучше перенести.
+    // С apply [{coll, id, plate, to, text}] — переносит отмеченное: госномер очищается, значение уходит в марку/имя/телефон/комментарий.
+    // Каждая правка — в журнал (было → стало), прежние записи целиком — в «_plates_backup». Если запись уже поменяли — пропускаем.
+    if (b.action === 'plates') {
+      if (role !== 'owner') return send(res, 403, { ok: false, error: 'forbidden' });
+      const all = {};
+      for (const c of plates.COLLS) all[c] = await store.list(c);
+      const clientOf = {}; all.clients.forEach(function (c) { if (c.plate) clientOf[c.plate] = c; });
+      if (!Array.isArray(b.apply)) {
+        const list = [];
+        for (const c of plates.COLLS) for (const d of all[c]) {
+          const r = plates.classify(d.plate);
+          if (r.kind === 'ok') continue;
+          list.push({ coll: c, id: d.id, plate: d.plate, kind: r.kind, to: r.to, text: r.text, date: d.date || d.received || '', what: log.describe(c, d),
+            client: c !== 'clients' && !!clientOf[d.plate] });
+        }
+        const opts = {}; plates.COLLS.forEach(function (c) { opts[c] = plates.options(c); });
+        return send(res, 200, { ok: true, list: list, opts: opts });
+      }
+      if (b.apply.length > 3000) return send(res, 400, { ok: false, error: 'body' });
+      const done = [], skipped = [], backup = [];
+      for (const a of b.apply) {
+        const c = a && String(a.coll), id = a && Number(a.id), to = a && String(a.to);
+        if (plates.COLLS.indexOf(c) < 0 || !Number.isInteger(id) || to === 'keep' || !plates.options(c).some(function (o) { return o[0] === to; })) { skipped.push(a); continue; }
+        const old = all[c].find(function (x) { return x.id === id; });
+        if (!old || !old.plate || old.plate !== String(a.plate || '')) { skipped.push(a); continue; }
+        const max = {}; Object.keys(schema.SCHEMA[c]).forEach(function (k) { max[k] = schema.SCHEMA[c][k].max; });
+        const doc = await store.update(c, id, plates.apply(c, old, to, String(a.text || '').slice(0, 200), max, c === 'clients' ? null : clientOf[old.plate]));
+        if (!doc) { skipped.push(a); continue; }
+        backup.push({ coll: c, doc: old });
+        await log.change(me, role, c, old, doc);
+        done.push({ coll: c, id: id });
+      }
+      if (backup.length) await store.insert('_plates_backup', { at: new Date().toISOString(), who: me, list: backup });
+      await log.add({ who: me, role: role, kind: 'edit', title: 'Проверка госномеров', text: 'Перенесено из поля «Госномер»: ' + done.length + (skipped.length ? ', пропущено: ' + skipped.length : '') });
+      return send(res, 200, { ok: true, done: done.length, skipped: skipped.length });
     }
 
     // продажа б/у шин со склада: уменьшает остаток и проводит продажу в кассу работой kind='sale'
