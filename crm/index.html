@@ -657,28 +657,12 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
   function expOn(d) { return (S.D.expenses || []).filter(function (x) { return x.date === d; }).sort(function (a, b) { return (a.created || '').localeCompare(b.created || '') || a.id - b.id; }); }
   // расходы пополам (11.11.2026): половину оплачивают мастера (вычитается из их процента), половину — мастерская
   function expHalf(e) { return Math.round(e / 2); }
-  function earnBy(js) {
-    var r = {};
-    js.forEach(function (j) { if (j.kind === 'sale') return; var k = j.master || 'Мастер не указан'; r[k] = (r[k] || 0) + Math.round((j.sum || 0) * jobPct(j) / 100); });
-    return r;
-  }
-  // половина расходов дня делится между мастерами по тому, сколько каждый заработал в этот день;
-  // если в этот день работ не было — по заработку за месяц
-  function expByMaster(m) {
-    var out = {}, pool = 0, byDay = {};
-    var split = function (half, per) {
-      var ks = Object.keys(per).filter(function (k) { return per[k] > 0; }).sort(function (a, b) { return per[b] - per[a]; });
-      var tot = ks.reduce(function (a, k) { return a + per[k]; }, 0), left = half;
-      if (!tot) return false;
-      ks.forEach(function (k, i) { var v = i === ks.length - 1 ? left : Math.round(half * per[k] / tot); left -= v; out[k] = (out[k] || 0) + v; });
-      return true;
-    };
+  // у мастеров одна общая зарплата: половина расходов вычитается из общей суммы мастерам (по дням, с округлением)
+  function monthHalf(m) {
+    var byDay = {};
     (S.D.expenses || []).forEach(function (x) { if ((x.date || '').slice(0, 7) === m) byDay[x.date] = (byDay[x.date] || 0) + (x.sum || 0); });
-    Object.keys(byDay).forEach(function (d) { var hf = expHalf(byDay[d]); if (!split(hf, earnBy(jobsOn(d)))) pool += hf; });
-    if (pool && !split(pool, earnBy(jobsIn(m)))) out['Мастер не указан'] = (out['Мастер не указан'] || 0) + pool;
-    return out;
+    return Object.keys(byDay).reduce(function (a, d) { return a + expHalf(byDay[d]); }, 0);
   }
-  function monthHalf(m) { var o = expByMaster(m); return Object.keys(o).reduce(function (a, k) { return a + o[k]; }, 0); }
   // касса за день: приход по способам оплаты (работы + оплаченное хранение), расходы и сколько наличных осталось
   function dayCash(d) {
     var js = jobsOn(d), sts = stPaidOn(d), ex = expOn(d);
@@ -1188,20 +1172,21 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     }
     var cols = [{ t: 'Дата' }, { t: 'Машин', r: 1 }, { t: 'Касса', r: 1 }, { t: 'Нал', r: 1 }, { t: 'Карта', r: 1 }, { t: 'Перевод', r: 1 }, { t: 'Безнал', r: 1 }, { t: 'Хранение', r: 1 }, { t: 'Мастерам', r: 1 }, { t: 'Расходы', r: 1 }, { t: 'Нал в кассе', r: 1 }, { t: 'Остаётся', r: 1 }];
     // зарплата по каждому мастеру (продажи б/у шин не считаются)
-    var per = {}, eb = expByMaster(m);
+    var per = {}, mh = monthHalf(m);
     jobsIn(m).filter(function (j) { return j.kind !== 'sale'; }).forEach(function (j) {
       var k = j.master || 'Мастер не указан', o = per[k] || (per[k] = { n: 0, s: 0, m: 0 });
       o.n++; o.s += j.sum || 0; o.m += Math.round((j.sum || 0) * jobPct(j) / 100);
     });
-    Object.keys(eb).forEach(function (k) { if (!per[k]) per[k] = { n: 0, s: 0, m: 0 }; });
-    Object.keys(per).forEach(function (k) { per[k].e = eb[k] || 0; per[k].p = per[k].m - per[k].e; });
     var names = Object.keys(per).sort(function (a, b) { return per[b].m - per[a].m; });
-    var mCols = [{ t: 'Мастер' }, { t: 'Работ', r: 1 }, { t: 'На сумму', r: 1 }, { t: 'По проценту', r: 1 }, { t: 'Половина расходов', r: 1 }, { t: 'К выплате', r: 1 }];
+    var mCols = [{ t: 'Мастер' }, { t: 'Работ', r: 1 }, { t: 'На сумму', r: 1 }, { t: 'По проценту', r: 1 }];
     var all = names.map(function (k) { return per[k]; });
     var mTable = names.length ? '<h2 style="margin:28px 0 12px">Зарплата по мастерам</h2>' +
-      table(mCols, names.map(function (k) { return ['<b>' + h(k) + '</b>', per[k].n, money(per[k].s), money(per[k].m), per[k].e ? '−' + money(per[k].e) : '', '<b class="num">' + money(per[k].p) + '</b>']; }),
-        ['Итого', sum(all, 'n'), money(sum(all, 's')), money(sum(all, 'm')), sum(all, 'e') ? '−' + money(sum(all, 'e')) : '', money(sum(all, 'p'))], 'nw') +
-      '<p class="muted" style="margin:8px 0 0;font-size:13px">Процент берётся тот, что был в день записи работы. Мастер берётся из поля «Мастер» в работе. Расходы из кассы пополам: половина — мастерская, половина — мастера. Половина расходов дня делится между мастерами по тому, кто сколько заработал в этот день (если работ в этот день не было — по заработку за месяц).</p>' : '';
+      table(mCols, names.map(function (k) { return ['<b>' + h(k) + '</b>', per[k].n, money(per[k].s), money(per[k].m)]; }),
+        ['Итого', sum(all, 'n'), money(sum(all, 's')), money(sum(all, 'm'))], 'nw') +
+      '<div class="grid stats" style="margin-top:12px"><div class="stat"><span>Мастерам по проценту</span><b>' + money(sum(all, 'm')) + '</b></div>' +
+      '<div class="stat"><span>Минус половина расходов</span><b>' + (mh ? '−' : '') + money(mh) + '</b></div>' +
+      '<div class="stat hot"><span>Мастерам к выплате (общая)</span><b>' + money(sum(all, 'm') - mh) + '</b></div></div>' +
+      '<p class="muted" style="margin:8px 0 0;font-size:13px">Процент берётся тот, что был в день записи работы. Мастер берётся из поля «Мастер» в работе. Расходы из кассы пополам: половина — мастерская, половина вычитается из общей зарплаты мастеров.</p>' : '';
     return top('Касса и зарплата · ' + MON[mo - 1] + ' ' + y,
       '<input class="in" type="month" data-date="rMonth" value="' + m + '" aria-label="Месяц">' +
       '<label class="tools" style="gap:6px" title="Действует на новые работы, прошлые не пересчитываются">Мастеру <input class="in" style="width:76px" type="number" min="0" max="100" id="pctIn" value="' + p + '"> % с новых работ</label>' +
