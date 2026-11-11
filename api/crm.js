@@ -12,7 +12,7 @@ const { PRICES } = require('./_lib/seed');
 
 const COLLS = Object.keys(schema.SCHEMA).filter(function (c) { return c[0] !== '_'; });
 // хранение и б/у шины ведёт отдельный человек (владелец), мастеру они не видны
-const MASTER_WRITE = ['clients', 'bookings', 'jobs']; // очередь на сайте ставит только владелец (30.10.2026)
+const MASTER_WRITE = ['clients', 'bookings', 'jobs', 'expenses']; // очередь на сайте ставит только владелец (30.10.2026)
 const OWNER_ONLY = ['settings', 'staff', 'storage', 'tires', 'paint', 'shop', 'invoices']; // покраску дисков принимает только владелец
 // компании для безнала заводит владелец; мастер видит только их названия — чтобы выбрать компанию в работе
 // сотрудник «Только запись» (роль booker): видит запись и расписание, записывает машины; работ, кассы и прочего не видит
@@ -315,6 +315,16 @@ module.exports = async function handler(req, res) {
         const bid = old ? old.booking || 0 : Number(input.booking);
         data.booking = Number.isInteger(bid) && bid > 0 ? bid : 0;
         if (!old && data.booking) booking = (await store.list('bookings')).find(function (x) { return x.id === data.booking; }) || null;
+      }
+      if (coll === 'expenses') {
+        // расход из кассы: мастер записывает и правит только сегодняшние, прошлые дни — владелец
+        const old = id === null ? null : (await store.list('expenses')).find(function (x) { return x.id === id; });
+        if (id !== null && !old) return send(res, 404, { ok: false, error: 'not-found' });
+        if (role !== 'owner' && (data.date !== today() || (old && old.date !== today()))) return send(res, 403, { ok: false, error: 'old-job' });
+        const now = new Date().toISOString();
+        data.by = old ? old.by || '' : me;
+        data.created = old ? old.created || '' : now;
+        if (old) { data.editedBy = me; data.edited = now; }
       }
       if (coll === 'tires') {
         const m = /R\s*(\d{2})/i.exec(data.size);

@@ -122,6 +122,7 @@ textarea.in{min-height:72px;resize:vertical}
 .empty{padding:28px 16px;text-align:center;color:var(--muted)}
 .muted{color:var(--muted)}
 .num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbl.nw td.r{white-space:nowrap}
 .tag{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;background:var(--soft)}
 .t-new{background:var(--accent);color:#fff}
 .t-ok{background:var(--ok-bg);color:var(--ok)}
@@ -182,6 +183,18 @@ input.plate::placeholder{font-family:var(--text);font-weight:400;letter-spacing:
 .hint{grid-column:1/-1;padding:10px 12px;border-radius:10px;background:var(--soft);font-size:14px}
 .sumline{grid-column:1/-1;display:flex;justify-content:space-between;align-items:baseline;padding:12px 14px;border-radius:10px;background:var(--dark);color:#fff}
 .sumline b{font-family:var(--display);font-size:22px}
+/* отчёт за день (11.11.2026) */
+.drep{display:grid;gap:12px;clear:both}
+.drep .dnav{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.drep section{background:var(--soft);border-radius:12px;padding:12px 14px}
+.drep h3{font-size:15px;margin:0 0 6px}
+.drow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:5px 0}
+.drow span{min-width:0;overflow-wrap:anywhere}
+.drow b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.drow.tot{font-weight:700;font-size:17px;padding-top:9px}
+.drow.tot b{font-family:var(--display);font-size:19px}
+.dleft{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:14px 16px;border-radius:12px;background:var(--accent);color:#fff}
+.dleft b{font-family:var(--display);font-size:24px;white-space:nowrap}
 .acts{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;margin-top:20px}
 .acts div{display:flex;gap:8px;flex-wrap:wrap}
 .err{color:var(--bad);font-weight:600;font-size:14px;margin-top:10px}
@@ -545,12 +558,12 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     'plate': 'Клиент с таким госномером уже есть в базе.',
     'forbidden': 'Это может сделать только владелец.',
     'pin-taken': 'Такой код уже занят. Придумайте другой.',
-    'old-job': 'Мастер записывает и правит работы только за сегодня. Прошлые дни меняет владелец.',
+    'old-job': 'Мастер записывает и правит работы и расходы только за сегодня. Прошлые дни меняет владелец.',
     'server': 'Ошибка на сервере. Попробуйте ещё раз.',
     'in-use': 'У этой компании есть работы или счета, удалить её нельзя.',
     'in-invoice': 'Эта работа уже в счёте. Сумму, оплату и компанию можно менять, только удалив счёт (раздел «Безнал»).'
   };
-  var FIELD = { plate: 'госномер', date: 'дата', time: 'время', service: 'услуга', name: 'название', received: 'дата приёма', qty: 'количество', price: 'цена', adjust: 'скидка / доплата (сумма работы не может быть меньше нуля)', cost: 'стоимость', until: 'хранить до', issued: 'дата выдачи', masterPct: 'процент мастера', pin: 'код (ровно 4 цифры)', items: 'услуги', master: 'мастер', size: 'размер', sold: 'продано (не больше принятого)', sellQty: 'сколько шин (не больше остатка)', phone: 'телефон', color: 'цвет', prepaid: 'аванс (не больше цены)', img: 'фото (не больше 12 на заказ)', company: 'компания (для безнала её нужно выбрать)', jobs: 'работы в счёте' };
+  var FIELD = { plate: 'госномер', date: 'дата', time: 'время', service: 'услуга', name: 'название', received: 'дата приёма', qty: 'количество', price: 'цена', adjust: 'скидка / доплата (сумма работы не может быть меньше нуля)', cost: 'стоимость', until: 'хранить до', issued: 'дата выдачи', masterPct: 'процент мастера', pin: 'код (ровно 4 цифры)', items: 'услуги', master: 'мастер', size: 'размер', sold: 'продано (не больше принятого)', sellQty: 'сколько шин (не больше остатка)', phone: 'телефон', color: 'цвет', prepaid: 'аванс (не больше цены)', what: 'на что потратили', sum: 'сумма', img: 'фото (не больше 12 на заказ)', company: 'компания (для безнала её нужно выбрать)', jobs: 'работы в счёте' };
   function errText(e) { if (e.code === 'field') return 'Проверьте поле «' + (FIELD[e.field] || e.field) + '».'; return ERR[e.code] || 'Не получилось: нет связи с сервером.'; }
 
   function load(quiet) {
@@ -640,6 +653,16 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
   function toMaster(js) { return js.reduce(function (a, j) { return a + Math.round((j.sum || 0) * jobPct(j) / 100); }, 0); }
   function stPaidOn(d) { return S.D.storage.filter(function (x) { return x.paid && (x.paidOn || x.received) === d; }); }
   function jobsOn(d) { return S.D.jobs.filter(function (j) { return j.date === d; }); }
+  // расходы из кассы (11.11.2026): деньги уходят из наличных
+  function expOn(d) { return (S.D.expenses || []).filter(function (x) { return x.date === d; }).sort(function (a, b) { return (a.created || '').localeCompare(b.created || '') || a.id - b.id; }); }
+  // касса за день: приход по способам оплаты (работы + оплаченное хранение), расходы и сколько наличных осталось
+  function dayCash(d) {
+    var js = jobsOn(d), sts = stPaidOn(d), ex = expOn(d);
+    var by = function (p) { return sum(js.filter(function (j) { return j.pay === p; }), 'sum') + sum(sts.filter(function (x) { return (x.payBy || 'Нал') === p; }), 'cost'); };
+    var r = { js: js, ex: ex, n: by('Нал'), k: by('Карта'), t: by('Перевод'), b: by('Безнал'), st: sum(sts, 'cost'), e: sum(ex, 'sum') };
+    r.all = sum(js, 'sum') + r.st; r.left = r.n - r.e;
+    return r;
+  }
   function jobsIn(month) { return S.D.jobs.filter(function (j) { return (j.date || '').slice(0, 7) === month; }); }
   function stStatus(s) {
     if (s.issued) return 'Выдано';
@@ -737,7 +760,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       ['Записей на сегодня', bt.length], ['Машин обслужено сегодня', cars(jt)]
     ];
     if (owner()) stats.push(['Касса сегодня', money(sum(jt, 'sum'))], ['Мастеру сегодня', money(toMaster(jt))]);
-    var out = top('Сегодня, ' + dm(t) + ' · ' + DOWF[dow(t)], '<button class="btn" type="button" data-new="bookings">+ Запись</button><button class="btn dark" type="button" data-new="jobs">+ Работа</button>' +
+    var out = top('Сегодня, ' + dm(t) + ' · ' + DOWF[dow(t)], '<button class="btn" type="button" data-new="bookings">+ Запись</button><button class="btn dark" type="button" data-new="jobs">+ Работа</button><button class="btn sec" type="button" data-new="expenses">+ Расход</button>' +
       (owner() ? '<button class="btn sec" type="button" data-new="paint">+ Диски на покраску</button>' : ''));
     // заявки с сайта и очередь на сайте на «Сегодня» видит и ведёт только владелец
     if (!owner()) fresh = [];
@@ -752,6 +775,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     if (owner()) out += queueBox(fresh.length);
     out += '<div class="grid stats" style="margin-top:' + (owner() ? 24 : 0) + 'px">' + stats.map(function (s, i) { return '<div class="stat' + (i === 0 && s[1] ? ' hot' : '') + '"><span>' + s[0] + '</span><b>' + s[1] + '</b></div>'; }).join('') + '</div>';
     out += '<h2 class="sec-title">Запись на сегодня</h2>' + bookingTable(bt, true);
+    out += expBox(t);
     out += '<h2 class="sec-title">' + (owner() ? 'Этот месяц и склад' : 'Этот месяц') + '</h2><div class="grid stats">' +
       '<div class="stat"><span>Машин за ' + MON[Number(month.slice(5)) - 1] + '</span><b>' + cars(jm) + '</b></div>' +
       (owner() ? '<div class="stat"><span>Касса за месяц</span><b>' + money(sum(jm, 'sum')) + '</b></div><div class="stat"><span>Мастеру за месяц</span><b>' + money(toMaster(jm)) + '</b></div>' : '') +
@@ -769,6 +793,55 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     }
     return out;
   };
+  // расходы за день: из наличных в кассе
+  function expBox(d) {
+    var c = dayCash(d);
+    var out = '<h2 class="sec-title">Расходы из кассы сегодня</h2><div class="grid stats">' +
+      '<div class="stat"><span>Наличными пришло</span><b>' + money(c.n) + '</b></div>' +
+      '<div class="stat"><span>Расходы</span><b>' + (c.e ? '−' : '') + money(c.e) + '</b></div>' +
+      '<div class="stat' + (c.left < 0 ? ' hot' : '') + '"><span>Наличных в кассе</span><b>' + money(c.left) + '</b></div></div>';
+    if (c.ex.length) out += '<div style="margin-top:12px">' + table([{ t: 'Время' }, { t: 'На что' }, { t: 'Сумма', r: 1 }, { t: 'Записал' }, { t: 'Комментарий' }], c.ex.map(function (x) {
+      var r = [x.created ? stamp(x.created).slice(6) : '', '<b>' + h(x.what) + '</b>', '<b class="num">−' + money(x.sum) + '</b>', h(x.by || ''), x.note ? '<span class="muted">' + h(x.note) + '</span>' : ''];
+      r._open = 'expenses:' + x.id; return r;
+    })) + '</div>';
+    out += '<div class="tools" style="margin-top:12px"><button class="btn sec" type="button" data-new="expenses">+ Расход</button><button class="btn sec" type="button" data-drep="' + d + '">Отчёт за день</button></div>';
+    return out;
+  }
+  // отчёт за день: приход наличными, картой, переводом, безналом, общая касса, расходы и остаток наличных
+  function openDayReport(d) {
+    var c = dayCash(d), t = today();
+    M = { coll: 'dayrep', d: d };
+    var row = function (a, b, cls) { return '<div class="drow' + (cls ? ' ' + cls : '') + '"><span>' + a + '</span><b>' + b + '</b></div>'; };
+    var nav = '<div class="dnav"><button type="button" class="btn sec small" data-drep="' + addDays(d, -1) + '" aria-label="Предыдущий день">‹</button>' +
+      '<input class="in" type="date" id="drepDate" value="' + d + '" max="' + t + '" aria-label="День" style="width:auto">' +
+      '<button type="button" class="btn sec small" data-drep="' + addDays(d, 1) + '" aria-label="Следующий день"' + (d >= t ? ' disabled' : '') + '>›</button>' +
+      (d !== t ? '<button type="button" class="btn sec small" data-drep="' + t + '">Сегодня</button>' : '') + '</div>';
+    var inc = row('Наличными', money(c.n)) + row('Картой', money(c.k)) + (c.t ? row('Переводом', money(c.t)) : '') + row('Безналом (по счёту)', money(c.b)) + row('Общая касса', money(c.all), 'tot') +
+      (c.st ? '<small class="muted">В том числе хранение шин: ' + money(c.st) + '</small>' : '');
+    var ex = c.ex.length ? c.ex.map(function (x) { return row(h(x.what) + (x.note ? ' <small class="muted">' + h(x.note) + '</small>' : ''), '−' + money(x.sum)); }).join('') + row('Всего расходов', '−' + money(c.e), 'tot')
+      : '<p class="muted" style="margin:0">Расходов не было.</p>';
+    var mm = owner() ? toMaster(c.js) : 0;
+    $('sheet').innerHTML = '<button type="button" class="x" data-close aria-label="Закрыть">×</button><h2 id="mTitle">Отчёт за день · ' + dm(d) + ' · ' + DOWF[dow(d)] + '</h2>' +
+      '<div class="drep">' + nav +
+      '<p class="muted" style="margin:0">Машин: ' + cars(c.js) + ' · работ: ' + c.js.length + '</p>' +
+      '<section><h3>Приход</h3>' + inc + '</section>' +
+      '<section><h3>Расходы из наличных</h3>' + ex + '</section>' +
+      '<div class="dleft"><span>Наличных в кассе на конец дня</span><b>' + money(c.left) + '</b></div>' +
+      (owner() ? '<section>' + row('Мастерам по проценту', money(mm)) + row('Остаётся мастерской (касса − мастерам − расходы)', money(c.all - mm - c.e)) +
+        '<small class="muted">Покраска дисков — отдельная касса, сюда не входит.</small></section>' : '') +
+      '</div><div class="acts"><div><button type="button" class="btn sec" data-drprint="' + d + '">Печать</button></div><div>' +
+      (owner() || d === t ? '<button type="button" class="btn sec" data-new="expenses">+ Расход</button>' : '') + '<button type="button" class="btn" data-close>Закрыть</button></div></div>';
+    $('modal').hidden = false;
+    $('drepDate').addEventListener('change', function (e) { if (e.target.value) openDayReport(e.target.value); });
+  }
+  function printDay(d) {
+    var c = dayCash(d), r = function (a, b) { return '<tr><td>' + h(a) + '</td><td>' + h(b) + '</td></tr>'; };
+    $('print').innerHTML = '<h2>ШИНОМОНТАЖ PRO</h2><h2 style="margin-top:6pt">Отчёт за день ' + dmy(d) + '</h2><div>Машин: ' + cars(c.js) + ', работ: ' + c.js.length + '</div>' +
+      '<table>' + r('Наличными', money(c.n)) + r('Картой', money(c.k)) + (c.t ? r('Переводом', money(c.t)) : '') + r('Безналом', money(c.b)) + r('Общая касса', money(c.all)) + '</table>' +
+      '<table>' + (c.ex.length ? c.ex.map(function (x) { return r(x.what + (x.note ? ' (' + x.note + ')' : ''), '−' + money(x.sum)); }).join('') : r('Расходов не было', '')) + r('Всего расходов', '−' + money(c.e)) + '</table>' +
+      '<table>' + r('Наличных в кассе на конец дня', money(c.left)) + '</table><p style="margin-top:14pt">Сдал: ________________ &nbsp;&nbsp; Принял: ________________</p>';
+    window.print();
+  }
   // очередь, которую видят клиенты на сайте; старше 3 часов сайт её не показывает
   var QW = [[0, 'Свободно'], [20, '~20 мин'], [40, '~40 мин'], [60, '~1 час'], [90, '1,5 часа+'], [-1, 'Только по записи']];
   function queueBox(gap) {
@@ -831,7 +904,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     var list = (mode === 'day' ? jobsOn(d) : jobsIn(m)).slice().sort(function (a, b) { return a.date.localeCompare(b.date) || a.id - b.id; });
     var tools = seg('jMode', mode, [['day', 'День'], ['month', 'Месяц']]) +
       (mode === 'day' ? dateNav('jDate', d) : '<input class="in" type="month" data-date="jMonth" value="' + m + '" aria-label="Месяц">') +
-      '<button class="btn" type="button" data-new="jobs">+ Работа</button>';
+      '<button class="btn sec" type="button" data-drep="' + (mode === 'day' ? d : today()) + '">Отчёт за день</button><button class="btn" type="button" data-new="jobs">+ Работа</button>';
     var cols = [{ t: 'Дата' }, { t: 'Машина' }, { t: 'Клиент' }, { t: 'Услуга' }, { t: 'Сумма', r: 1 }, { t: 'Оплата' }, { t: 'Мастер' }, { t: 'Комментарий' }];
     var rows = list.map(function (j) {
       var ls = jobLines(j);
@@ -1076,17 +1149,18 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
 
   V.report = function () {
     var m = fv('rMonth', today().slice(0, 7)), y = Number(m.slice(0, 4)), mo = Number(m.slice(5));
-    var days = new Date(Date.UTC(y, mo, 0)).getUTCDate(), p = pct(), rows = [], tot = { c: 0, s: 0, n: 0, k: 0, t: 0, b: 0, st: 0, m: 0 };
+    var days = new Date(Date.UTC(y, mo, 0)).getUTCDate(), p = pct(), rows = [], tot = { c: 0, s: 0, n: 0, k: 0, t: 0, b: 0, st: 0, m: 0, e: 0 };
     for (var i = 1; i <= days; i++) {
       var d = m + '-' + p2(i), js = jobsOn(d), sts = stPaidOn(d);
       var byPay = function (pay) { return sum(js.filter(function (j) { return j.pay === pay; }), 'sum') + sum(sts.filter(function (x) { return (x.payBy || 'Нал') === pay; }), 'cost'); };
       var st = sum(sts, 'cost'), s = sum(js, 'sum') + st, n = byPay('Нал'), k = byPay('Карта'), t = byPay('Перевод'), bz = byPay('Безнал');
-      var mm = toMaster(js);
+      var mm = toMaster(js), ex = sum(expOn(d), 'sum');
+      tot.e += ex;
       tot.c += cars(js); tot.s += s; tot.n += n; tot.k += k; tot.t += t; tot.b += bz; tot.st += st; tot.m += mm;
-      if (!js.length && !sts.length && fv('rAll', '0') !== '1') continue;
-      rows.push([dm(d) + ' <span class="muted">' + DOW[dow(d)] + '</span>', cars(js) || '', money(s), money(n), money(k), money(t), bz ? money(bz) : '', st ? money(st) : '', money(mm), money(s - mm)]);
+      if (!js.length && !sts.length && !ex && fv('rAll', '0') !== '1') continue;
+      rows.push([dm(d) + ' <span class="muted">' + DOW[dow(d)] + '</span>', cars(js) || '', money(s), money(n), money(k), money(t), bz ? money(bz) : '', st ? money(st) : '', money(mm), ex ? '−' + money(ex) : '', money(n - ex), money(s - mm - ex)]);
     }
-    var cols = [{ t: 'Дата' }, { t: 'Машин', r: 1 }, { t: 'Касса', r: 1 }, { t: 'Нал', r: 1 }, { t: 'Карта', r: 1 }, { t: 'Перевод', r: 1 }, { t: 'Безнал', r: 1 }, { t: 'Из них хранение', r: 1 }, { t: 'Мастерам', r: 1 }, { t: 'Остаётся', r: 1 }];
+    var cols = [{ t: 'Дата' }, { t: 'Машин', r: 1 }, { t: 'Касса', r: 1 }, { t: 'Нал', r: 1 }, { t: 'Карта', r: 1 }, { t: 'Перевод', r: 1 }, { t: 'Безнал', r: 1 }, { t: 'Хранение', r: 1 }, { t: 'Мастерам', r: 1 }, { t: 'Расходы', r: 1 }, { t: 'Нал в кассе', r: 1 }, { t: 'Остаётся', r: 1 }];
     // зарплата по каждому мастеру (продажи б/у шин не считаются)
     var per = {};
     jobsIn(m).filter(function (j) { return j.kind !== 'sale'; }).forEach(function (j) {
@@ -1103,9 +1177,10 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       '<input class="in" type="month" data-date="rMonth" value="' + m + '" aria-label="Месяц">' +
       '<label class="tools" style="gap:6px" title="Действует на новые работы, прошлые не пересчитываются">Мастеру <input class="in" style="width:76px" type="number" min="0" max="100" id="pctIn" value="' + p + '"> % с новых работ</label>' +
       seg('rAll', fv('rAll', '0'), [['0', 'Дни с работой'], ['1', 'Все дни']])) +
-      table(cols, rows, ['Итого', tot.c, money(tot.s), money(tot.n), money(tot.k), money(tot.t), money(tot.b), money(tot.st), money(tot.m), money(tot.s - tot.m)]) +
+      table(cols, rows, ['Итого', tot.c, money(tot.s), money(tot.n), money(tot.k), money(tot.t), money(tot.b), money(tot.st), money(tot.m), tot.e ? '−' + money(tot.e) : '', money(tot.n - tot.e), money(tot.s - tot.m - tot.e)], 'nw') +
       '<div class="grid stats" style="margin-top:16px"><div class="stat"><span>Хранение шин, оплачено за месяц (мастеру не идёт, уже в кассе)</span><b>' + money(tot.st) + '</b></div>' +
-      '<div class="stat hot"><span>Мастерской за месяц всего</span><b>' + money(tot.s - tot.m) + '</b></div></div>' + mTable + paintReport(m, days);
+      '<div class="stat"><span>Расходы из кассы за месяц</span><b>' + money(tot.e) + '</b></div>' +
+      '<div class="stat hot"><span>Мастерской за месяц (за вычетом мастерам и расходов)</span><b>' + money(tot.s - tot.m - tot.e) + '</b></div></div>' + mTable + paintReport(m, days);
   };
   // касса покраски: отдельно от кассы шиномонтажа, в зарплату мастерам не входит
   function paintReport(m, days) {
@@ -1368,6 +1443,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       ['radius', 'Диаметр', RADII], ['qty', 'Сколько дисков', ['1', '2', '3', '4']], ['turn', 'Алмазная проточка', 'yesno'], ['color', 'Цвет', 'color', 'wide'],
       ['cond', 'Состояние дисков: сколы, трещины, следы ремонта', 'area'], ['received', 'Принято', 'date'], ['due', 'Готово к', 'date'],
       ['price', 'Цена за заказ, ₽', 'pprice'], ['prepaid', 'Аванс, ₽', 'int'], ['prepaidBy', 'Аванс внесли', PAY], ['pay', 'Остаток оплатят', PAY], ['status', 'Статус', PSTATUS, 'wide'], ['note', 'Примечание', 'text', 'wide'], ['_sum', '', 'psum']] },
+    expenses: { title: ['Расход из кассы', 'Расход из кассы'], fields: [['what', 'На что', 'expwhat', 'wide'], ['sum', 'Сумма, ₽', 'int'], ['date', 'Дата', 'date'], ['note', 'Комментарий', 'text', 'wide']] },
     prices: { title: ['Новая услуга', 'Услуга'], fields: [['name', 'Название', 'text', 'wide'], ['price', 'Цена, ₽', 'int'], ['unit', 'Цена указана за', UNITS], ['note', 'Примечание', 'text', 'wide']] },
     companies: { title: ['Новая компания', 'Компания'], fields: [['name', 'Название (ООО «…», ИП …)', 'text', 'wide'], ['inn', 'ИНН', 'text'], ['kpp', 'КПП', 'text'], ['ogrn', 'ОГРН / ОГРНИП', 'text'], ['address', 'Юридический адрес', 'text', 'wide'],
       ['bank', 'Банк', 'text', 'wide'], ['bik', 'БИК', 'text'], ['account', 'Расчётный счёт', 'text'], ['corr', 'Корр. счёт', 'text'], ['contact', 'Контактное лицо', 'text'], ['phone', 'Телефон', 'tel'], ['email', 'E-mail', 'text'], ['note', 'Примечание', 'area']] },
@@ -1386,6 +1462,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     clients: function () { return {}; },
     storage: function () { var t = today(); return { received: t, until: addDays(t, 182), season: 'Зима', rims: 'Без дисков', qty: 4, cost: 2000, paid: true, paidOn: t, payBy: 'Нал' }; },
     prices: function () { return { unit: '4 колеса' }; },
+    expenses: function () { return { date: owner() && S.view === 'jobs' && fv('jMode', 'day') === 'day' ? fv('jDate', today()) : today() }; },
     companies: function () { return {}; },
     shop: function () { return { name: '', address: 'Симферополь, ул. Трансформаторная, 6', vat: 'Без НДС' }; },
     paint: function () { var t = today(); return { received: t, due: addDays(t, 5), radius: 'R16', qty: 4, turn: false, status: 'Принято', prepaidBy: 'Нал', pay: 'Нал' }; }
@@ -1426,6 +1503,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       '<label class="btn sec">Сфотографировать<input type="file" accept="image/*" capture="environment" multiple id="phIn" hidden></label></div><small>Снимите каждый диск с лицевой стороны, особенно сколы и бордюрные следы. Фото сохранятся вместе с заказом.</small></div>';
     else if (type === 'pprice') ctl = '<input class="in" type="number" inputmode="numeric" min="0" step="1" name="' + k + '" value="' + h(v == null ? '' : v) + '"><small id="pBreak"></small>';
     else if (type === 'psum') return '<div class="sumline" id="sumline"><span>К оплате при выдаче</span><b>0 ₽</b></div>';
+    else if (type === 'expwhat') ctl = '<input class="in" name="' + k + '" list="expList" autocomplete="off" placeholder="например, грузики, вентили, обед" value="' + h(v || '') + '">' + expChips(k);
     else if (type === 'car') ctl = '<input class="in" name="' + k + '" list="carList" autocomplete="off" placeholder="например, Toyota Camry" value="' + h(v || '') + '">';
     else if (type === 'master') ctl = '<input class="in" name="' + k + '" list="masters" autocomplete="off" placeholder="кто делал" value="' + h(v || '') + '">' + nameChips(k);
     else if (type === 'items') return '<div class="lines"><span>' + label + '</span>' + popularChips() + '<div class="lines" id="lines">' + jobLines(doc).map(lineHtml).join('') + '</div>' +
@@ -1450,6 +1528,17 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
   // имена мастеров одним касанием — подставляются в поле рядом
   function nameChips(field) {
     var ns = masterNames().slice(0, 8); if (!ns.length) return '';
+    return '<div class="chips">' + ns.map(function (n) { return '<button type="button" class="chip" data-fill="' + field + '" data-v="' + h(n) + '"><span>' + h(n) + '</span></button>'; }).join('') + '</div>';
+  }
+  // частые расходы: из прошлых записей, пока их мало — типовые
+  function expNames() {
+    var cnt = {};
+    (S.D.expenses || []).forEach(function (x) { if (x.what) cnt[x.what] = (cnt[x.what] || 0) + 1; });
+    return Object.keys(cnt).sort(function (a, b) { return cnt[b] - cnt[a]; });
+  }
+  function expChips(field) {
+    var ns = expNames().slice(0, 8);
+    ['Грузики', 'Вентили', 'Расходники', 'Обед', 'Бензин', 'Хозтовары'].forEach(function (n) { if (ns.length < 6 && ns.indexOf(n) < 0) ns.push(n); });
     return '<div class="chips">' + ns.map(function (n) { return '<button type="button" class="chip" data-fill="' + field + '" data-v="' + h(n) + '"><span>' + h(n) + '</span></button>'; }).join('') + '</div>';
   }
   // частые услуги: по работам за последние 60 дней, если работ мало — первые из прайса
@@ -1528,7 +1617,9 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     var extra = '';
     if (coll === 'bookings' && id) { var b = S.D.bookings.find(function (x) { return x.id === id; }); if (b.source === 'site') extra = '<p class="hint" style="margin:0 0 14px">Заявка с сайта' + (b.created ? ', пришла ' + stamp(b.created) : '') + '. Позвоните клиенту, договоритесь о времени и сохраните со статусом «Записан».</p>'; }
     if (coll === 'clients' && id) extra = clientHistory(doc);
-    var locked = coll === 'jobs' && id && !owner() && doc.date !== today();
+    var locked = (coll === 'jobs' || coll === 'expenses') && id && !owner() && doc.date !== today();
+    if (coll === 'expenses') extra = '<p class="hint" style="margin:0 0 14px">' + [id && doc.by ? 'Записал: ' + h(doc.by) + (doc.created ? ', ' + stamp(doc.created) : '') + (doc.editedBy ? '; изменил: ' + h(doc.editedBy) + (doc.edited ? ', ' + stamp(doc.edited) : '') : '') : '',
+      'Деньги берутся из наличных в кассе.', locked ? 'Это расход за прошлый день. Изменить его может только владелец.' : !owner() ? 'Удалить расход может владелец; если ошиблись, исправьте сумму.' : ''].filter(Boolean).join('<br>') + '</p>';
     if (coll === 'jobs' && id) {
       var whoTxt = [doc.by ? 'Записал: ' + h(doc.by) + (doc.created ? ', ' + stamp(doc.created) : '') : '', doc.editedBy ? 'изменил: ' + h(doc.editedBy) + (doc.edited ? ', ' + stamp(doc.edited) : '') : ''].filter(Boolean).join('; ');
       var notes = [whoTxt, doc.kind === 'sale' ? 'Продажа б/у шин: название и количество не меняются. Если ошиблись с количеством, владелец удаляет продажу (шины вернутся на склад) и продаёт заново.' : '', locked ? 'Это работа за прошлый день. Изменить её может только владелец.' : ''].filter(Boolean);
@@ -1542,6 +1633,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       '<datalist id="services">' + S.D.prices.map(function (p) { return '<option value="' + h(p.name) + '"></option>'; }).join('') + '</datalist>' +
       '<datalist id="carList">' + carNames().map(function (n) { return '<option value="' + h(n) + '"></option>'; }).join('') + '</datalist>' +
       '<datalist id="masters">' + masterNames().map(function (n) { return '<option value="' + h(n) + '"></option>'; }).join('') + '</datalist>' +
+      (coll === 'expenses' ? '<datalist id="expList">' + expNames().map(function (n) { return '<option value="' + h(n) + '"></option>'; }).join('') + '</datalist>' : '') +
       '<p class="err" id="formErr" role="alert" hidden></p>' +
       '<div class="acts"><div>' + (canDel ? '<button type="button" class="btn sec" id="delBtn">Удалить</button>' : '') +
       (coll === 'bookings' && id && !booker() ? '<button type="button" class="btn sec" id="toJob">Записать работу</button>' : '') +
@@ -1557,6 +1649,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       Array.prototype.forEach.call(form.querySelectorAll('[name=l_service], [name=l_qty]'), function (el) { el.readOnly = true; });
       Array.prototype.forEach.call(form.querySelectorAll('#addLine, .wl-del, .stepper button, .chips.quick'), function (el) { el.style.display = 'none'; });
     }
+    if (coll === 'expenses' && !owner() && form.elements.date) form.elements.date.readOnly = true;
     if (coll === 'tires' && !owner()) {
       if (form.elements.sold) form.elements.sold.closest('.f').style.display = 'none';
       if (id && form.elements.qty) form.elements.qty.readOnly = true;
@@ -1732,6 +1825,8 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     if (coll === 'jobs' && M.plate) data.plate = M.plate;
     if (coll === 'bookings' && !data.car && !data.plate && !data.name && !data.phone) { err.textContent = 'Укажите марку машины, госномер, имя или телефон.'; err.hidden = false; return; }
     if (coll === 'paint' && digits(data.phone).length < 6) { err.textContent = 'Укажите телефон клиента.'; err.hidden = false; return; }
+    if (coll === 'expenses' && !data.what) { err.textContent = 'Укажите, на что потратили.'; err.hidden = false; return; }
+    if (coll === 'expenses' && !(data.sum > 0)) { err.textContent = 'Укажите сумму расхода.'; err.hidden = false; return; }
     if (coll === 'paint' && !data.color) { err.textContent = 'Выберите или впишите цвет.'; err.hidden = false; return; }
     var pend = coll === 'paint' ? M.pending.slice() : [];
     if (coll === 'jobs' && data.pay === 'Безнал' && !data.company) { err.textContent = 'Для безнала выберите компанию.'; err.hidden = false; return; }
@@ -1755,7 +1850,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
         return save('clients', cl.id, Object.assign({}, cl, { name: cl.name || data.name, phone: cl.phone || data.phone })).catch(function () {});
       }
     }).then(function () {
-      closeModal(); render(); toast('Сохранено');
+      var back = M && M.back; closeModal(); render(); toast('Сохранено'); if (back) openDayReport(back);
     }).catch(function (er) { err.textContent = errText(er); err.hidden = false; })
       .then(function () { btn.disabled = false; btn.textContent = 'Сохранить'; });
   }
@@ -1872,7 +1967,16 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     if (d.close != null) { closeModal(); return; }
     if (d.refresh != null) { menu(false); load(true).then(function () { toast('Данные обновлены'); }); return; }
     if (d.sell) { openSell(Number(d.sell)); return; }
-    if (d.new) { openForm(d.new); return; }
+    if (d.drep) { openDayReport(d.drep); return; }
+    if (d.drprint) { printDay(d.drprint); return; }
+    if (d.new) {
+      // «+ Расход» из отчёта за день: после сохранения отчёт откроется снова
+      var back = M && M.coll === 'dayrep' ? M.d : '';
+      if (back) closeModal();
+      openForm(d.new, null, back && owner() ? { date: back } : null);
+      if (back && M) M.back = back;
+      return;
+    }
     if (d.edit) { openForm(d.edit, Number(d.id)); return; }
     if (d.slot) { openForm('bookings', null, { date: fv('sDate', today()), time: d.slot }); return; }
     if (d.seg) { S.f[d.seg] = d.v; render(); return; }

@@ -14,11 +14,11 @@ const NAMES = {
   prices: ['Услуга в прайсе', 'добавлена', 'изменена', 'удалена'], staff: ['Сотрудник', 'добавлен', 'изменён', 'удалён'],
   settings: ['Настройки', 'заданы', 'изменены', 'удалены'], queue: ['Очередь на сайте', 'задана', 'изменена', 'удалена'],
   companies: ['Компания', 'добавлена', 'изменена', 'удалена'], shop: ['Реквизиты мастерской', 'заданы', 'изменены', 'удалены'],
-  invoices: ['Счёт', 'выставлен', 'изменён', 'удалён']
+  invoices: ['Счёт', 'выставлен', 'изменён', 'удалён'], expenses: ['Расход из кассы', 'добавлен', 'изменён', 'удалён']
 };
 // разделы для фильтра в журнале
 const SECTIONS = { jobs: 'Работы', bookings: 'Запись', clients: 'Клиенты', storage: 'Хранение', tires: 'Б/у шины', paint: 'Покраска', prices: 'Прайс',
-  staff: 'Сотрудники', settings: 'Настройки', queue: 'Очередь', companies: 'Безнал', shop: 'Безнал', invoices: 'Безнал' };
+  staff: 'Сотрудники', settings: 'Настройки', queue: 'Очередь', companies: 'Безнал', shop: 'Безнал', invoices: 'Безнал', expenses: 'Расходы' };
 // поля, которые показываем в «что изменилось»: [поле, подпись, вид]
 const FIELDS = {
   clients: [['plate', 'Госномер'], ['name', 'Имя'], ['phone', 'Телефон'], ['make', 'Марка'], ['model', 'Модель'], ['size', 'Размер'], ['note', 'Заметка']],
@@ -38,6 +38,7 @@ const FIELDS = {
   paint: [['id', 'Заказ № П-'], ['received', 'Дата приёма', 'date'], ['phone', 'Телефон'], ['name', 'Имя'], ['plate', 'Госномер'], ['car', 'Машина'], ['radius', 'Диаметр'], ['qty', 'Количество'], ['turn', 'Проточка', 'bool'], ['color', 'Цвет'],
     ['cond', 'Состояние'], ['due', 'Срок', 'date'], ['price', 'Цена', 'money'], ['prepaid', 'Аванс', 'money'], ['prepaidBy', 'Аванс оплачен'], ['status', 'Статус'], ['pay', 'Оплата'], ['note', 'Заметка']],
   prices: [['name', 'Название'], ['price', 'Цена', 'money'], ['unit', 'Указана за'], ['note', 'Примечание']],
+  expenses: [['date', 'Дата', 'date'], ['what', 'На что'], ['sum', 'Сумма', 'money'], ['note', 'Комментарий'], ['by', 'Записал']],
   settings: [['masterPct', 'Процент мастера']],
   staff: [['name', 'Имя'], ['access', 'Доступ'], ['pinHash', 'Код', 'secret']],
   queue: [['wait', 'Ожидание', 'wait']]
@@ -101,6 +102,7 @@ function describe(coll, d) {
   else if (coll === 'queue') p = [wait(Number(d.wait) || 0)];
   else if (coll === 'companies') p = [d.name, d.inn ? 'ИНН ' + d.inn : ''];
   else if (coll === 'shop') p = [d.name, d.inn ? 'ИНН ' + d.inn : ''];
+  else if (coll === 'expenses') p = [dmy(d.date), d.what, money(d.sum), 'из наличных'];
   else if (coll === 'invoices') p = ['счёт № ' + d.id, dmy(d.date), CO[d.company] || '', money(d.sum)];
   return cut(p.filter(Boolean).join(' · '));
 }

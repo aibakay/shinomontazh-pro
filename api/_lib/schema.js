@@ -47,6 +47,8 @@ const SCHEMA = {
     price: I(0, 1000000), prepaid: I(0, 1000000), prepaidBy: E(PAY, 'Нал'), prepaidOn: { t: 'date' },
     status: E(PSTATUS, 'Принято'), readyOn: { t: 'date' }, issued: { t: 'date' }, pay: E(PAY, 'Нал'), note: S(300), photos: I(0, 99)
   },
+  // расходы из кассы (11.11.2026): деньги берутся из наличных в кассе. by/created ставит сервер
+  expenses: { date: { t: 'date', req: true }, sum: I(1, 1000000, true), what: S(120, true), note: S(300) },
   prices: { name: S(120, true), price: I(0, 1000000), unit: E(UNITS, '1 колесо'), note: S(200) },
   settings: { masterPct: I(0, 100) },
   // безнал (10.11.2026): компании-плательщики заводит владелец; shop — реквизиты самой мастерской для счёта (одна запись);
