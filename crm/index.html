@@ -1295,7 +1295,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     var c = compBy(v.company) || {}, s = (S.D.shop || [])[0] || {};
     var js = invIds(v).map(function (n) { return S.D.jobs.find(function (j) { return j.id === n; }); }).filter(Boolean).sort(function (a, b) { return a.date.localeCompare(b.date) || a.id - b.id; });
     var total = sum(js, 'sum'), rm = /(\d+)%/.exec(s.vat || ''), rate = rm ? Number(rm[1]) : 0, vat = rate ? Math.round(total * rate / (100 + rate) * 100) / 100 : 0;
-    var party = function (o) { return h([o.name, o.inn ? 'ИНН ' + o.inn : '', o.kpp ? 'КПП ' + o.kpp : '', o.address, o.phone ? 'тел. ' + o.phone : ''].filter(Boolean).join(', ')); };
+    var party = function (o) { return h([o.name, o.inn ? 'ИНН ' + o.inn : '', o.kpp ? 'КПП ' + o.kpp : '', o.address, o.phone ? 'тел. ' + o.phone : '', o.email ? 'e-mail ' + o.email : ''].filter(Boolean).join(', ')); };
     var line = function (j) { var t = jobTitle(j) || 'Услуги шиномонтажа'; return t.charAt(0).toUpperCase() + t.slice(1) + ' (' + [j.car, j.plate, dmy(j.date)].filter(Boolean).join(', ') + ')'; };
     var ip = String(s.inn || '').length === 12;
     $('print').innerHTML = '<div class="inv">' +
@@ -1333,9 +1333,12 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     prices: { title: ['Новая услуга', 'Услуга'], fields: [['name', 'Название', 'text', 'wide'], ['price', 'Цена, ₽', 'int'], ['unit', 'Цена указана за', UNITS], ['note', 'Примечание', 'text', 'wide']] },
     companies: { title: ['Новая компания', 'Компания'], fields: [['name', 'Название (ООО «…», ИП …)', 'text', 'wide'], ['inn', 'ИНН', 'text'], ['kpp', 'КПП', 'text'], ['ogrn', 'ОГРН / ОГРНИП', 'text'], ['address', 'Юридический адрес', 'text', 'wide'],
       ['bank', 'Банк', 'text', 'wide'], ['bik', 'БИК', 'text'], ['account', 'Расчётный счёт', 'text'], ['corr', 'Корр. счёт', 'text'], ['contact', 'Контактное лицо', 'text'], ['phone', 'Телефон', 'tel'], ['email', 'E-mail', 'text'], ['note', 'Примечание', 'area']] },
-    shop: { title: ['Реквизиты мастерской', 'Реквизиты мастерской'], fields: [['name', 'Название для счёта (ИП Иванов Иван Иванович или ООО «…»)', 'text', 'wide'], ['inn', 'ИНН', 'text'], ['kpp', 'КПП (у ИП пусто)', 'text'], ['ogrn', 'ОГРН / ОГРНИП', 'text'],
-      ['address', 'Адрес', 'text', 'wide'], ['phone', 'Телефон', 'tel'], ['bank', 'Банк', 'text', 'wide'], ['bik', 'БИК', 'text'], ['account', 'Расчётный счёт', 'text'], ['corr', 'Корр. счёт', 'text'],
-      ['head', 'Кто подписывает (Фамилия И. О.)', 'text'], ['vat', 'НДС', VAT, 'wide'], ['footer', 'Текст внизу счёта (например, «Оплата в течение 5 банковских дней»)', 'area']] }
+    shop: { title: ['Реквизиты мастерской', 'Реквизиты мастерской'], fields: [['name', 'Название для счёта (ИП Иванов Иван Иванович или ООО «…»)', 'text', 'wide'], ['fullName', 'Полное наименование', 'text', 'wide'],
+      ['inn', 'ИНН', 'text'], ['kpp', 'КПП (у ИП пусто)', 'text'], ['ogrn', 'ОГРН / ОГРНИП', 'text'], ['okpo', 'ОКПО', 'text'], ['okato', 'ОКАТО', 'text'], ['oktmo', 'ОКТМО', 'text'],
+      ['address', 'Юридический адрес', 'text', 'wide'], ['factAddress', 'Фактический адрес', 'text', 'wide'], ['postAddress', 'Почтовый адрес', 'text', 'wide'],
+      ['phone', 'Телефон', 'tel'], ['email', 'E-mail', 'text'],
+      ['bank', 'Банк', 'text', 'wide'], ['bik', 'БИК', 'text'], ['account', 'Расчётный счёт', 'text'], ['corr', 'Корр. счёт', 'text'], ['bankInn', 'ИНН банка', 'text'], ['bankKpp', 'КПП банка', 'text'],
+      ['headFull', 'Руководитель (полностью)', 'text', 'wide'], ['head', 'Кто подписывает счёт (Фамилия И. О.)', 'text'], ['vat', 'НДС', VAT, 'wide'], ['footer', 'Текст внизу счёта (например, «Оплата в течение 5 банковских дней»)', 'area']] }
   };
   var DEF = {
     bookings: function () { return { date: S.view === 'schedule' ? fv('sDate', today()) : today(), status: 'Записан' }; },

@@ -57,7 +57,10 @@ const SCHEMA = {
   },
   shop: {
     name: S(160), inn: S(12), kpp: S(9), ogrn: S(15), address: S(300), bank: S(160), bik: S(9), account: S(20), corr: S(20),
-    phone: S(60), head: S(120), vat: E(VAT, 'Без НДС'), footer: S(300)
+    phone: S(60), head: S(120), vat: E(VAT, 'Без НДС'), footer: S(300),
+    // из карточки предприятия (11.11.2026)
+    fullName: S(250), factAddress: S(300), postAddress: S(300), okpo: S(14), okato: S(11), oktmo: S(11),
+    bankInn: S(10), bankKpp: S(9), email: S(80), headFull: S(160)
   },
   invoices: { date: { t: 'date', req: true }, company: I(1, 1000000000, true), jobs: S(4000, true), note: S(300), paid: { t: 'bool' }, paidOn: { t: 'date' } },
   // очередь для сайта (одна запись): wait — минут ожидания, 0 — свободно, -1 — сегодня только по записи; at/by ставит сервер
