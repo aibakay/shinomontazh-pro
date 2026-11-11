@@ -118,6 +118,12 @@ textarea.in{min-height:72px;resize:vertical}
 .stat span{display:block;color:var(--muted);font-size:13px}
 .stat b{display:block;font-family:var(--display);font-size:24px;letter-spacing:-0.03em;margin-top:6px;font-variant-numeric:tabular-nums}
 .stat.hot{background:var(--accent);color:#fff}.stat.hot span{color:#ffe3e5}
+.stat .dl{display:block;margin-top:4px;font-size:12px;color:var(--muted)}.stat .dl.up{color:var(--ok)}.stat .dl.down{color:var(--bad)}.stat.hot .dl{color:#ffe3e5}
+.mstats{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+@media (max-width:460px){.mstats{grid-template-columns:1fr 1fr}}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:14px;margin-top:16px}
+.mbox{padding:16px;display:flex;flex-direction:column;gap:2px}.mbox h3{font-size:16px;margin-bottom:8px}.mbox small{margin-top:6px;font-size:13px}
+.tbl .bar{display:block;height:6px;margin-top:6px;border-radius:3px;background:var(--ink);opacity:.18}
 .sec-title{font-size:16px;margin:28px 0 12px}
 .empty{padding:28px 16px;text-align:center;color:var(--muted)}
 .muted{color:var(--muted)}
@@ -1160,6 +1166,99 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       '<div class="acts2">' + btn + '<button class="btn sec small" type="button" data-pprint="' + o.id + '">Бирка</button></div></article>';
   }
 
+  // ---------- итоги месяца для владельца: выручка, расходы, зарплата, какие услуги приносят больше
+  function prevMonth(m) { var y = Number(m.slice(0, 4)), mo = Number(m.slice(5)) - 1; if (!mo) { y--; mo = 12; } return y + '-' + p2(mo); }
+  // вид услуги: без радиуса и уточнения после двоеточия («Шиномонтаж легковой R16» → «Шиномонтаж легковой»)
+  function svcKind(name) { return String(name || '').replace(/:.*$/, '').replace(/\s+R\d+([–-]\d+)?\s*$/i, '').trim() || 'Без названия'; }
+  function jobLines(j) { return j.items && j.items.length ? j.items : j.service ? [{ service: j.service, qty: j.qty, price: j.price, unit: j.unit }] : []; }
+  // upto — считать только по этот день месяца (для честного сравнения текущего месяца с прошлым)
+  function monthStats(m, upto) {
+    var inM = function (d) { return (d || '').slice(0, 7) === m && (!upto || Number(d.slice(8, 10)) <= upto); };
+    var js = jobsIn(m).filter(function (j) { return inM(j.date); }), by = function (p) { return sum(js.filter(function (j) { return j.pay === p; }), 'sum'); };
+    var st = S.D.storage.filter(function (x) { return x.paid && inM(x.paidOn || x.received); });
+    var ex = (S.D.expenses || []).filter(function (x) { return inM(x.date); });
+    var pc = paintCash().filter(function (x) { return inM(x.date); });
+    var r = { js: js, n: by('Нал'), k: by('Карта'), t: by('Перевод'), b: by('Безнал'), w: sum(js, 'sum'), st: sum(st, 'cost'), e: sum(ex, 'sum'), ex: ex, paint: sum(pc, 'sum'), cars: cars(js) };
+    var hd = {}; ex.forEach(function (x) { hd[x.date] = (hd[x.date] || 0) + (x.sum || 0); });
+    r.mp = toMaster(js); r.mh = Object.keys(hd).reduce(function (a, d) { return a + expHalf(hd[d]); }, 0); r.mm = r.mp - r.mh; r.all = r.w + r.st; r.left = r.all - r.mm - r.e;
+    r.avg = r.cars ? Math.round(r.w / r.cars) : 0;
+    r.days = {}; js.forEach(function (j) { r.days[j.date] = 1; }); r.days = Object.keys(r.days).length;
+    return r;
+  }
+  // деньги по услугам: строки работ по прайсу; скидки/доплаты и продажи б/у шин — отдельными строками, чтобы итог сходился с кассой
+  function svcMoney(js, exact) {
+    var g = {}, add = function (k, v, id) { var o = g[k] || (g[k] = { k: k, s: 0, ids: {} }); o.s += v; o.ids[id] = 1; };
+    js.forEach(function (j) {
+      if (j.kind === 'sale') { add('Продажа б/у шин', j.sum || 0, j.id); return; }
+      var ls = jobLines(j), t = 0;
+      ls.forEach(function (l) { var v = lineSum(l); t += v; add(exact ? String(l.service || '').trim() || 'Без названия' : svcKind(l.service), v, j.id); });
+      var rest = (j.sum || 0) - t;
+      if (rest) add(rest < 0 ? 'Скидки' : 'Доплаты', rest, j.id);
+    });
+    return Object.keys(g).map(function (k) { var o = g[k]; o.n = Object.keys(o.ids).length; return o; })
+      .sort(function (a, b) { return (a.s < 0) - (b.s < 0) || b.s - a.s; });
+  }
+  function expByWhat(ex) {
+    var g = {};
+    ex.forEach(function (x) { var k = String(x.what || '').trim() || 'Без описания', o = g[k] || (g[k] = { k: k, s: 0, n: 0 }); o.s += x.sum || 0; o.n++; });
+    return Object.keys(g).map(function (k) { return g[k]; }).sort(function (a, b) { return b.s - a.s; });
+  }
+  function delta(now, was) {
+    if (!was) return '';
+    var d = Math.round((now - was) / Math.abs(was) * 100);
+    return '<small class="dl ' + (d > 0 ? 'up' : d < 0 ? 'down' : '') + '">' + (d > 0 ? '+' : d < 0 ? '−' : '±') + Math.abs(d) + '% к прошлому</small>';
+  }
+  function bar(v, max) { return '<i class="bar" style="width:' + (max > 0 ? Math.max(2, Math.round(Math.max(0, v) / max * 100)) : 0) + '%"></i>'; }
+  function monthSummary(m) {
+    // текущий месяц сравниваем с теми же днями прошлого месяца, прошедшие — целиком
+    var pm = prevMonth(m), upto = m === today().slice(0, 7) ? Number(today().slice(8, 10)) : 0;
+    var r = monthStats(m), pr = monthStats(pm, upto), pl = MON[Number(pm.slice(5)) - 1].toLowerCase();
+    var stat = function (t, v, extra, cls) { return '<div class="stat' + (cls ? ' ' + cls : '') + '"><span>' + t + '</span><b>' + v + '</b>' + (extra || '') + '</div>'; };
+    var row = function (a, b, cls) { return '<div class="drow' + (cls ? ' ' + cls : '') + '"><span>' + a + '</span><b>' + b + '</b></div>'; };
+    var share = function (v) { return r.w ? ' <small class="muted">' + Math.round(v / r.w * 100) + '%</small>' : ''; };
+    var out = '<div class="grid stats mstats">' +
+      stat('Выручка за работы', money(r.w), delta(r.w, pr.w)) +
+      stat('Машин', r.cars, delta(r.cars, pr.cars)) +
+      stat('Средний чек', money(r.avg), delta(r.avg, pr.avg)) +
+      stat('Остаётся мастерской', money(r.left), delta(r.left, pr.left), 'hot') + '</div>';
+    if (pr.w) out += '<p class="muted" style="margin:8px 0 0;font-size:13px">Сравнение с ' + (upto ? '1–' + upto + ' ' + MONG[Number(pm.slice(5)) - 1] : 'прошлым месяцем (' + pl + ')') + ': выручка ' + money(pr.w) + ', машин ' + pr.cars + ', средний чек ' + money(pr.avg) + '.</p>';
+    out += '<div class="mgrid">' +
+      '<section class="card mbox"><h3>Деньги за месяц</h3>' +
+        row('Наличными', money(r.n) + share(r.n)) + row('Картой', money(r.k) + share(r.k)) + row('Переводом', money(r.t) + share(r.t)) + row('Безналом (по счёту)', money(r.b) + share(r.b)) +
+        row('Выручка за работы', money(r.w), 'tot') + row('Хранение шин (оплачено)', money(r.st)) + row('Касса всего', money(r.all), 'tot') +
+        '<small class="muted">Покраска дисков — отдельная касса: ' + money(r.paint) + ' за месяц (внизу страницы).</small></section>' +
+      '<section class="card mbox"><h3>Куда ушли деньги</h3>' +
+        row('Мастерам по проценту', money(r.mp)) + (r.mh ? row('Минус половина расходов', '−' + money(r.mh)) : '') + row('Мастерам к выплате', money(r.mm), 'tot') +
+        row('Расходы из кассы', (r.e ? '−' : '') + money(r.e)) +
+        expByWhat(r.ex).slice(0, 6).map(function (x) { return row('<span class="muted">· ' + h(x.k) + (x.n > 1 ? ' (' + x.n + ')' : '') + '</span>', '<span class="muted">' + money(x.s) + '</span>'); }).join('') +
+        '<div class="dleft" style="margin-top:10px"><span>Остаётся мастерской</span><b>' + money(r.left) + '</b></div>' +
+        '<small class="muted">Касса − мастерам к выплате − расходы. Работали дней: ' + r.days + '.</small></section></div>';
+    // какие услуги приносят больше всего
+    var exact = fv('rSvc', 'kind') === 'exact', sv = svcMoney(r.js, exact), max = sv.reduce(function (a, x) { return Math.max(a, x.s); }, 0), n = Number(fv('rSvcN', 10));
+    out += '<div class="top" style="margin:28px 0 12px"><h2>Что приносит деньги</h2><div class="tools">' + seg('rSvc', exact ? 'exact' : 'kind', [['kind', 'По видам'], ['exact', 'По прайсу']]) + '</div></div>';
+    if (!sv.length) out += '<div class="card empty">За этот месяц работ нет.</div>';
+    else {
+      out += table([{ t: 'Услуга' }, { t: 'Работ', r: 1 }, { t: 'Сумма', r: 1 }, { t: 'Доля', r: 1 }], sv.slice(0, n).map(function (x) {
+        return ['<b>' + h(x.k) + '</b>' + (x.s > 0 ? bar(x.s, max) : ''), x.n, (x.s < 0 ? '−' : '') + money(Math.abs(x.s)), r.w && x.s > 0 ? Math.round(x.s / r.w * 100) + '%' : ''];
+      }), ['Итого', r.js.length, money(r.w), r.w ? '100%' : ''], 'svc');
+      if (sv.length > n) out += '<p style="margin:12px 0 0"><button class="btn sec" type="button" data-seg="rSvcN" data-v="' + (n + 20) + '">Показать ещё (' + (sv.length - n) + ')</button></p>';
+      out += '<p class="muted" style="margin:8px 0 0;font-size:13px">«Работ» — в скольких работах была услуга. Сумма — по ценам в работах; скидки, доплаты и продажа б/у шин — отдельными строками, поэтому итог совпадает с выручкой.</p>';
+    }
+    return out;
+  }
+  function printMonth(m) {
+    var r = monthStats(m), mo = Number(m.slice(5)), tr = function (a, b) { return '<tr><td>' + h(a) + '</td><td>' + h(b) + '</td></tr>'; };
+    var sv = svcMoney(r.js, false), ex = expByWhat(r.ex);
+    $('print').innerHTML = '<h2>ШИНОМОНТАЖ PRO</h2><h2 style="margin-top:6pt">Отчёт за ' + MON[mo - 1].toLowerCase() + ' ' + m.slice(0, 4) + '</h2>' +
+      '<div>Машин: ' + r.cars + ', работ: ' + r.js.length + ', средний чек: ' + money(r.avg) + ', дней с работой: ' + r.days + '</div>' +
+      '<table>' + tr('Наличными', money(r.n)) + tr('Картой', money(r.k)) + tr('Переводом', money(r.t)) + tr('Безналом', money(r.b)) + tr('Выручка за работы', money(r.w)) + tr('Хранение шин', money(r.st)) + tr('Касса всего', money(r.all)) + '</table>' +
+      '<table>' + tr('Мастерам по проценту', money(r.mp)) + tr('Минус половина расходов', '−' + money(r.mh)) + tr('Мастерам к выплате', money(r.mm)) + tr('Расходы из кассы', '−' + money(r.e)) + tr('Остаётся мастерской', money(r.left)) + '</table>' +
+      (ex.length ? '<table>' + ex.map(function (x) { return tr(x.k, money(x.s)); }).join('') + '</table>' : '') +
+      (sv.length ? '<table>' + sv.map(function (x) { return tr(x.k + ' (' + x.n + ')', (x.s < 0 ? '−' : '') + money(Math.abs(x.s))); }).join('') + '</table>' : '') +
+      (r.paint ? '<div>Касса покраски дисков (отдельно): ' + money(r.paint) + '</div>' : '');
+    window.print();
+  }
+
   V.report = function () {
     var m = fv('rMonth', today().slice(0, 7)), y = Number(m.slice(0, 4)), mo = Number(m.slice(5));
     var days = new Date(Date.UTC(y, mo, 0)).getUTCDate(), p = pct(), rows = [], tot = { c: 0, s: 0, n: 0, k: 0, t: 0, b: 0, st: 0, m: 0, e: 0, nl: 0 };
@@ -1190,14 +1289,14 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       '<div class="stat"><span>Минус половина расходов</span><b>' + (mh ? '−' : '') + money(mh) + '</b></div>' +
       '<div class="stat hot"><span>Мастерам к выплате (общая)</span><b>' + money(sum(all, 'm') - mh) + '</b></div></div>' +
       '<p class="muted" style="margin:8px 0 0;font-size:13px">Процент берётся тот, что был в день записи работы. Мастер берётся из поля «Мастер» в работе. Расходы из кассы пополам: половина — мастерская, половина вычитается из общей зарплаты мастеров.</p>' : '';
-    return top('Касса и зарплата · ' + MON[mo - 1] + ' ' + y,
+    return top('Отчёт за месяц · ' + MON[mo - 1] + ' ' + y,
       '<input class="in" type="month" data-date="rMonth" value="' + m + '" aria-label="Месяц">' +
       '<label class="tools" style="gap:6px" title="Действует на новые работы, прошлые не пересчитываются">Мастеру <input class="in" style="width:76px" type="number" min="0" max="100" id="pctIn" value="' + p + '"> % с новых работ</label>' +
-      seg('rAll', fv('rAll', '0'), [['0', 'Дни с работой'], ['1', 'Все дни']])) +
+      '<button class="btn sec" type="button" data-mprint="' + m + '">Печать</button>') +
+      monthSummary(m) +
+      '<div class="top" style="margin:28px 0 12px"><h2>По дням</h2><div class="tools">' + seg('rAll', fv('rAll', '0'), [['0', 'Дни с работой'], ['1', 'Все дни']]) + '</div></div>' +
       table(cols, rows, ['Итого', tot.c, money(tot.s), money(tot.n), money(tot.k), money(tot.t), money(tot.b), money(tot.st), money(tot.m), tot.e ? '−' + money(tot.e) : '', money(tot.nl), money(tot.s - tot.m - tot.e)], 'nw') +
-      '<div class="grid stats" style="margin-top:16px"><div class="stat"><span>Хранение шин, оплачено за месяц (мастеру не идёт, уже в кассе)</span><b>' + money(tot.st) + '</b></div>' +
-      '<div class="stat"><span>Расходы из кассы за месяц (пополам: мастерам ' + money(monthHalf(m)) + ')</span><b>' + money(tot.e) + '</b></div>' +
-      '<div class="stat hot"><span>Мастерской за месяц (за вычетом мастерам и расходов)</span><b>' + money(tot.s - tot.m - tot.e) + '</b></div></div>' + mTable + paintReport(m, days);
+      mTable + paintReport(m, days);
   };
   // касса покраски: отдельно от кассы шиномонтажа, в зарплату мастерам не входит
   function paintReport(m, days) {
@@ -1986,6 +2085,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     if (d.sell) { openSell(Number(d.sell)); return; }
     if (d.drep) { openDayReport(d.drep); return; }
     if (d.drprint) { printDay(d.drprint); return; }
+    if (d.mprint) { printMonth(d.mprint); return; }
     if (d.new) {
       // «+ Расход» из отчёта за день: после сохранения отчёт откроется снова
       var back = M && M.coll === 'dayrep' ? M.d : '';
