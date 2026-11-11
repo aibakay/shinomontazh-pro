@@ -910,7 +910,11 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
 
   V.jobs = function () {
     var mode = fv('jMode', 'day'), d = fv('jDate', today()), m = fv('jMonth', today().slice(0, 7));
-    var list = (mode === 'day' ? jobsOn(d) : jobsIn(m)).slice().sort(function (a, b) { return a.date.localeCompare(b.date) || a.id - b.id; });
+    var all = (mode === 'day' ? jobsOn(d) : jobsIn(m)).slice().sort(function (a, b) { return a.date.localeCompare(b.date) || a.id - b.id; });
+    // фильтр по способу оплаты (11.11.2026): Все / Нал / Безнал / Картой / Переводом, в кнопке — сколько работ
+    var pay = fv('jPay', ''), list = pay ? all.filter(function (j) { return j.pay === pay; }) : all;
+    var payN = function (p) { return all.filter(function (j) { return j.pay === p; }).length; };
+    var paySeg = seg('jPay', pay, [['', 'Все · ' + all.length], ['Нал', 'Нал · ' + payN('Нал')], ['Безнал', 'Безнал · ' + payN('Безнал')], ['Карта', 'Картой · ' + payN('Карта')], ['Перевод', 'Переводом · ' + payN('Перевод')]]);
     var tools = seg('jMode', mode, [['day', 'День'], ['month', 'Месяц']]) +
       (mode === 'day' ? dateNav('jDate', d) : '<input class="in" type="month" data-date="jMonth" value="' + m + '" aria-label="Месяц">') +
       '<button class="btn sec" type="button" data-drep="' + (mode === 'day' ? d : today()) + '">Отчёт за день</button><button class="btn" type="button" data-new="jobs">+ Работа</button>';
@@ -924,7 +928,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     });
     var payTot = JPAY.map(function (p) { var s = sum(list.filter(function (j) { return j.pay === p; }), 'sum'); return s ? '<span class="num" style="display:block">' + p + ' ' + money(s) + '</span>' : ''; }).join('');
     var foot = list.length ? ['Итого', '', cars(list) + ' маш.', '', '<span class="num">' + money(sum(list, 'sum')) + '</span>', payTot, '', ''] : null;
-    return top('Работы', tools) + table(cols, rows, foot);
+    return top('Работы', tools) + '<div class="tools" style="margin:-6px 0 14px" aria-label="Оплата">' + paySeg + '</div>' + table(cols, rows, foot);
   };
 
   // ---------- история машины (11.11.2026): все работы, записи, хранение и покраска одной машины и сколько клиент заплатил всего.
