@@ -919,7 +919,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
   };
   function bkCard(b) {
     return '<button type="button" class="bk' + (b.status === 'Отменён' ? ' cancel' : '') + '" data-edit="bookings" data-id="' + b.id + '">' +
-      (b.plate ? '<span class="plate">' + h(b.plate) + '</span>' : '') + '<b>' + h(who(b) || 'без имени') + '</b>' + (carOf(b) ? '<span>' + h(carOf(b)) + '</span>' : '') + '<span>' + h(b.service) + '</span>' + tag(b.status) + (phoneOf(b) ? '<span class="muted num">' + h(phoneOf(b)) + '</span>' : '') + '</button>';
+      (b.plate ? '<span class="plate">' + h(b.plate) + '</span>' : '') + '<b>' + h(who(b) || 'без имени') + '</b>' + (carOf(b) ? '<b>' + h(carOf(b)) + '</b>' : '') + '<span>' + h(b.service) + '</span>' + tag(b.status) + (phoneOf(b) ? '<span class="muted num">' + h(phoneOf(b)) + '</span>' : '') + '</button>';
   }
 
   V.jobs = function () {
