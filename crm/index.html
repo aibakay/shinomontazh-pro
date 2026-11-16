@@ -70,6 +70,9 @@ main{min-width:0;padding:24px 28px 80px}
 .top h1{font-size:26px}
 .tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .mbar,.scrim{display:none}
+/* 16.11.2026: в «Расписании» дата, день недели и ← → остаются наверху при прокрутке */
+.stick{position:sticky;top:0;z-index:15;background:var(--bg);margin:-24px -28px 0;padding:16px 28px 4px}
+.stick .top{margin-bottom:12px}
 @media (max-width:860px){
   .app{display:block}
   /* на телефоне: верхняя полоса с кнопкой меню, разделы выезжают шторкой слева */
@@ -85,6 +88,7 @@ main{min-width:0;padding:24px 28px 80px}
   .scrim{display:block;position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .28s}
   .app.menu-open .scrim{opacity:1;pointer-events:auto}
   main{padding:16px 12px 80px}
+  .stick{top:var(--mbarH,64px);margin:-16px -12px 0;padding:10px 12px 2px}
   .top h1{font-size:21px}
 }
 
@@ -331,6 +335,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
   .app{grid-template-columns:208px 1fr}
   .side{padding:20px 12px}
   main{padding:22px 20px 80px}
+  .stick{margin:-22px -20px 0;padding:14px 20px 4px}
 }
 /* планшет в портретной ориентации и телефон: строки таблиц — карточками */
 @media (max-width:900px){
@@ -374,6 +379,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
 @media (max-width:860px){
   .burger{width:48px;height:48px}
   main{padding:16px 16px 80px}
+  .stick{margin:-16px -16px 0;padding:10px 16px 2px}
 }
 @media (max-width:560px){
   .acts{bottom:0;margin-bottom:0;padding-bottom:16px}
@@ -908,7 +914,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     var list = S.D.bookings.filter(function (b) { return b.date === d; }).sort(byDateTime);
     var active = list.filter(function (b) { return b.status !== 'Отменён'; });
     var off = list.filter(function (b) { return !b.time || SLOTS.indexOf(b.time) < 0; });
-    var out = top('Расписание · ' + dm(d) + ' ' + DOWF[dow(d)], dateNav('sDate', d)) + '<p class="muted" style="margin:-8px 0 16px">Записей: ' + active.length + '. Нажмите на свободное время, чтобы записать клиента.</p>';
+    var out = '<div class="stick">' + top('Расписание · ' + dm(d) + ' ' + DOWF[dow(d)], dateNav('sDate', d)) + '</div><p class="muted" style="margin:-8px 0 16px">Записей: ' + active.length + '. Нажмите на свободное время, чтобы записать клиента.</p>';
     out += '<div class="slots">' + SLOTS.map(function (s) {
       var here = list.filter(function (b) { return b.time === s; });
       return '<div class="slot"><time>' + s + '</time><div class="cell">' + (here.length ? here.map(bkCard).join('') : '') +
