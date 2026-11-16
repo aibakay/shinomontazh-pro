@@ -750,8 +750,8 @@ html.lenis,html.lenis body{height:auto}
         <h2 class="h2">Услуги</h2>
       </div>
       <ul class="points st">
-        <li><h3>Шиномонтаж</h3><p>Легковые, кроссоверы и внедорожники, диски до R24. Цена за комплект, балансировка входит. <b>От 1 600 ₽</b></p></li>
-        <li><h3>Шины с индексом «C»</h3><p>Усиленные шины фургонов и микроавтобусов, обычно комплект из 6 колёс. <b>700 ₽ за колесо</b></p></li>
+        <li><h3>Шиномонтаж</h3><p>Легковые, кроссоверы и внедорожники, диски до R24. Цена за комплект. <b>От 1 600 ₽</b></p></li>
+        <li><h3>Шины с индексом «C»</h3><p>Усиленные шины фургонов и микроавтобусов. <b>700 ₽ за колесо</b></p></li>
         <li><h3>Балансировка</h3><p>Отдельно, без шиномонтажа, за комплект. Колёса от R13 до R22. <b>От 1 200 ₽</b></p></li>
         <li><h3>Ремонт дисков</h3><p>Правим литые и штампованные диски. <b>От 500 ₽</b></p></li>
         <li><h3>Аргонная сварка</h3><p>Завариваем трещины на литых дисках. <b>От 1 000 ₽ за 1 см</b></p></li>
@@ -858,7 +858,7 @@ html.lenis,html.lenis body{height:auto}
               <tr><td>R22</td><td>2 400</td></tr>
             </tbody>
           </table></div>
-          <p class="p-note">Отдельная услуга, без шиномонтажа. При шиномонтаже балансировка уже входит в цену.</p>
+          <p class="p-note">Отдельная услуга, без шиномонтажа.</p>
         </div>
         <div class="panel" role="tabpanel" id="p3" aria-labelledby="t3" hidden>
           <div class="extras">
@@ -1314,7 +1314,7 @@ html.lenis,html.lenis body{height:auto}
     if (v == null) { $('hqSum').textContent = 'по запросу'; heroShown = 0; }
     else countTo($('hqSum'), heroShown, v, '', function (x) { heroShown = x; });
     $('hqR2').textContent = 'R' + R[cr];
-    $('hqMore').textContent = 'Кроссовер ' + priceOr(MT[1][cr]) + ' · внедорожник ' + priceOr(MT[2][cr]) + '. Балансировка уже входит.';
+    $('hqMore').textContent = 'Кроссовер ' + priceOr(MT[1][cr]) + ' · внедорожник ' + priceOr(MT[2][cr]) + '.';
     var pk = MT[0][cr];
     $('pkSum').textContent = pk == null ? 'По запросу' : fmt(pk);
     $('pkNote').textContent = pk == null ? 'Для R' + R[cr] + ' цену назовём по телефону.' : 'Легковой, R' + R[cr] + ', по прайсу. Мойка колёс отдельно, 100 ₽ за колесо.';
