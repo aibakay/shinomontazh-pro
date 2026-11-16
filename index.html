@@ -259,6 +259,7 @@ p{margin:0}
 
 /* мастерская: фото в круге (мотив), мастера — круги поменьше */
 #team[hidden]{display:none}
+#team .wrap > .st:first-child{display:grid;gap:20px}
 .shots{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:64px}
 .shots img{width:100%;height:auto;aspect-ratio:3/4;object-fit:cover;background:var(--surface)}
 @media (max-width:860px){.shots{display:flex;gap:12px;margin-top:40px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px}.shots img{flex:0 0 72%;scroll-snap-align:start}}
@@ -777,7 +778,6 @@ html.lenis,html.lenis body{height:auto}
       <div class="toggles" id="toggles" role="group" aria-label="Дополнительно"></div>
     </div>
     <div class="tiles st" data-gs id="tiles" aria-live="polite"></div>
-    <p class="price-note small">Окончательную цену мастер назовёт после осмотра, до начала работы.</p>
 
     <div class="full st" id="price">
       <h2>Полный прайс, ₽</h2>
@@ -939,12 +939,12 @@ html.lenis,html.lenis body{height:auto}
       <div class="ftab" style="--tc:var(--f-gold)">Покраска</div>
       <div class="f-in">
         <div class="pair">
-          <figure><img src="photos/paint-before.jpg" width="900" height="1200" loading="lazy" decoding="async" alt="Литой диск Mercedes AMG до покраски: потёртое покрытие и сколы"><span class="tag l">До</span></figure>
-          <figure><img src="photos/paint-after.jpg" width="900" height="1200" loading="lazy" decoding="async" alt="Тот же диск после покраски: чёрный глянец и светлая лицевая сторона"><span class="tag r">После</span></figure>
+          <figure><img src="photos/paint-before.jpg" width="900" height="1200" decoding="async" alt="Литой диск Mercedes AMG до покраски: потёртое покрытие и сколы"><span class="tag l">До</span></figure>
+          <figure><img src="photos/paint-after.jpg" width="900" height="1200" decoding="async" alt="Тот же диск после покраски: чёрный глянец и светлая лицевая сторона"><span class="tag r">После</span></figure>
         </div>
         <div class="f-text">
           <h3>Диски Mercedes AMG</h3>
-          <p>Снимаем старую краску, грунтуем и красим порошковой краской. Такое покрытие прочнее обычной краски.</p>
+          <p>Покраска в чёрный глянец и алмазная проточка.</p>
           <a href="#contacts" class="btn" data-book="Покраска дисков">Записаться на покраску</a>
         </div>
       </div>
@@ -969,18 +969,15 @@ html.lenis,html.lenis body{height:auto}
   </div>
 </section>
 
-<section class="sec" id="team" hidden>
-  <div class="wrap team">
-    <div class="team-box rise" id="teamBox"></div>
-    <div class="team-side st">
+<section class="sec" id="team">
+  <div class="wrap">
+    <div class="st">
       <h2 class="h2">Мастерская</h2>
-      <p class="lead">Ул. Трансформаторная, 6. Здесь работают мастера, которые называют цену до начала работы.</p>
+      <p class="lead">Симферополь, ул. Трансформаторная, 6. Ежедневно с 08:00 до 20:00.</p>
       <ul class="crew" id="crew"></ul>
     </div>
-  </div>
-  <div class="wrap">
     <div class="shots st">
-      <img src="photos/shop-1.jpg" width="900" height="1200" loading="lazy" decoding="async" alt="Въезд в бокс развала-схождения, у входа машины клиентов">
+      <img src="photos/shop-4.jpg" width="900" height="1200" loading="lazy" decoding="async" alt="Вывеска «Шиномонтаж PRO» и машины клиентов у входа">
       <img src="photos/shop-2.jpg" width="900" height="1200" loading="lazy" decoding="async" alt="Навес мастерской и вывеска PRO, у входа BMW X6">
       <img src="photos/shop-3.jpg" width="900" height="1200" loading="lazy" decoding="async" alt="Машины под навесом мастерской в солнечный день">
     </div>
@@ -996,7 +993,7 @@ html.lenis,html.lenis body{height:auto}
     <div class="acc" id="acc">
       <button class="stage" type="button" aria-expanded="true"><span class="s-name">Приезжаете</span><span class="s-open"><h3>Приезжаете</h3><p>В выбранное время или без записи, если есть свободный пост.</p></span></button>
       <button class="stage" type="button" aria-expanded="false"><span class="s-name">Осмотр</span><span class="s-open"><h3>Осмотр</h3><p>Мастер проверяет шины и диски и говорит, что нужно сделать.</p></span></button>
-      <button class="stage" type="button" aria-expanded="false"><span class="s-name">Цена</span><span class="s-open"><h3>Цена</h3><p>Цену называем до начала работы, по прайсу.</p></span></button>
+      <button class="stage" type="button" aria-expanded="false"><span class="s-name">Цена</span><span class="s-open"><h3>Цена</h3><p>Считаем по прайсу.</p></span></button>
       <button class="stage" type="button" aria-expanded="false"><span class="s-name">Работа</span><span class="s-open"><h3>Работа</h3><p>Делаем работу, проверяем давление и затяжку колёс.</p></span></button>
     </div>
   </div>
@@ -1009,7 +1006,7 @@ html.lenis,html.lenis body{height:auto}
       <details name="faq"><summary>Как записаться онлайн?<i class="pm" aria-hidden="true"></i></summary><p>Нажмите «Записаться», выберите услугу, машину и время, оставьте имя и телефон. Мы перезвоним и подтвердим запись.</p></details>
       <details name="faq"><summary>Нужно ли записываться заранее?<i class="pm" aria-hidden="true"></i></summary><p>На шиномонтаж не обязательно: приезжайте, если есть свободный пост, обслужим. На покраску, проточку и сход-развал лучше записаться заранее.</p></details>
       <details name="faq"><summary>Работаете с большими колёсами и Run Flat?<i class="pm" aria-hidden="true"></i></summary><p>Да. Переобуваем легковые, кроссоверы и внедорожники до R24, в том числе шины Run Flat и низкий профиль.</p></details>
-      <details name="faq"><summary>Цена в калькуляторе окончательная?<i class="pm" aria-hidden="true"></i></summary><p>Калькулятор считает по прайсу. Точную цену мастер назовёт после осмотра, до начала работы.</p></details>
+      <details name="faq"><summary>Цена в калькуляторе окончательная?<i class="pm" aria-hidden="true"></i></summary><p>Калькулятор считает по прайсу.</p></details>
       <details name="faq"><summary>Когда пора делать сход-развал?<i class="pm" aria-hidden="true"></i></summary><ul><li>руль уводит в сторону или не возвращается в центр;</li><li>шины стираются неравномерно;</li><li>меняли шины, ремонтировали подвеску или рулевое;</li><li>машина хуже держит дорогу.</li></ul></details>
       <details name="faq"><summary>Можно ли восстановить диск после бордюра?<i class="pm" aria-hidden="true"></i></summary><p>Да. Правим диск, завариваем трещины аргоном, если нужно, делаем проточку и покраску.</p></details>
       <details name="faq"><summary>Какая гарантия?<i class="pm" aria-hidden="true"></i></summary><p><em class="ph">[условия гарантии]</em></p></details>
@@ -1103,7 +1100,7 @@ html.lenis,html.lenis body{height:auto}
 
       <fieldset class="m-step m-quick" data-step="5" hidden>
         <h3 id="qkTitle">Перезвоним за 5 минут</h3>
-        <p class="m-hint" id="qkHint">Оставьте имя и телефон. Мастер сам предложит время и назовёт цену.</p>
+        <p class="m-hint" id="qkHint">Оставьте имя и телефон. Мастер перезвонит и предложит время.</p>
         <div class="m-sum" id="qkSum"></div>
         <label class="fld" id="kName"><span>Имя</span><input name="qclient" autocomplete="given-name" placeholder="Как к вам обращаться" maxlength="60"><em class="err-msg">Напишите имя</em></label>
         <label class="fld" id="kPhone"><span>Телефон</span><input name="qphone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+7 (___) ___-__-__"><em class="err-msg">Проверьте номер: нужно 11 цифр</em></label>
@@ -1470,7 +1467,7 @@ html.lenis,html.lenis body{height:auto}
     if (quick) {
       var on = isOpen();
       $('qkTitle').textContent = bk.time ? (bk.day ? bk.day.split(',')[0].replace(/^./, function (c) { return c.toUpperCase(); }) + ' в ' + bk.time : bk.time) : on ? 'Перезвоним за 5 минут' : 'Перезвоним утром';
-      $('qkHint').textContent = bk.time ? 'Оставьте имя и телефон, ' + (on ? 'перезвоним и подтвердим время.' : 'утром перезвоним и подтвердим время.') : on ? 'Оставьте имя и телефон. Мастер сам предложит время и назовёт цену.' : 'Сейчас мы закрыты. Оставьте имя и телефон, перезвоним после 08:00.';
+      $('qkHint').textContent = bk.time ? 'Оставьте имя и телефон, ' + (on ? 'перезвоним и подтвердим время.' : 'утром перезвоним и подтвердим время.') : on ? 'Оставьте имя и телефон. Мастер перезвонит и предложит время.' : 'Сейчас мы закрыты. Оставьте имя и телефон, перезвоним после 08:00.';
     }
     modal.setAttribute('aria-labelledby', quick ? 'qkTitle' : 'bookTitle');
     var first = stepEl(s).querySelector(s === 3 || quick ? 'input' : 'button[aria-pressed=true], button, input');
@@ -1641,11 +1638,6 @@ html.lenis,html.lenis body{height:auto}
   var MASTERS = [['', 'Мастер'], ['', 'Мастер'], ['', 'Мастер'], ['', 'Мастер']];
   (function team() {
     function probe(src, ok) { var im = new Image(); im.onload = function () { ok(im); }; im.src = src; }
-    probe('photos/box.jpg', function (im) {
-      im.alt = 'Мастерская Шиномонтаж PRO на Трансформаторной, 6'; im.loading = 'lazy';
-      $('teamBox').appendChild(im); $('team').hidden = false;
-      if (window.ScrollTrigger) ScrollTrigger.refresh();
-    });
     MASTERS.forEach(function (m, i) {
       probe('photos/master-' + (i + 1) + '.jpg', function (im) {
         im.alt = m[0] ? 'Мастер ' + m[0] : 'Мастер'; im.loading = 'lazy';
