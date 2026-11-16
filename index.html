@@ -1352,7 +1352,7 @@ html.lenis,html.lenis body{height:auto}
   function sendLead(lead) {
     if (!BOOKING.endpoint) { console.info('Заявка (сайт открыт файлом, бот недоступен):', lead); return new Promise(function (r) { setTimeout(r, 700); }); }
     return fetch(BOOKING.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(lead) })
-      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); });
+      .then(function (r) { if (!r.ok) { var err = new Error('HTTP ' + r.status); err.status = r.status; throw err; } });
   }
 
   // маска телефона: +7 (978) 123-45-67
@@ -1417,16 +1417,24 @@ html.lenis,html.lenis body{height:auto}
     return { label: i === 0 ? 'Сегодня' : i === 1 ? 'Завтра' : DOW[d.getUTCDay()], sub: d.getUTCDate() + ' ' + MON[d.getUTCMonth()], iso: d.toISOString().slice(0, 10),
              value: (i === 0 ? 'сегодня, ' : i === 1 ? 'завтра, ' : DOW[d.getUTCDay()] + ', ') + d.getUTCDate() + ' ' + MON[d.getUTCMonth()] };
   }
+  // Время для записи — слоты по 30 минут, как в «Расписании» CRM. Занятые слоты (на них уже записано
+  // столько машин, сколько помещается, см. api/_lib/slots.js) приходят с /api/queue в Q.full и недоступны.
+  function nowMin() { var n = crimeaNow(); return n.h * 60 + n.m; }
+  function hm(m) { var h = Math.floor(m / 60); return (h < 10 ? '0' : '') + h + ':' + (m % 60 ? '30' : '00'); }
+  function times() { var t = []; for (var m = OPEN * 60; m < CLOSE * 60; m += 30) t.push(hm(m)); return t; }
+  function toMin(t) { return parseInt(t, 10) * 60 + parseInt(t.slice(3), 10); }
+  function isFull(iso, t) { return !!(Q && Q.full && Q.full[iso] && Q.full[iso].indexOf(t) >= 0); }
+  function slotFree(iso, t) { // не прошло (для сегодня) и не занято
+    if (iso === dayInfo(0).iso && toMin(t) <= nowMin()) return false;
+    return !isFull(iso, t);
+  }
+  function dayFree(iso) { return times().some(function (t) { return slotFree(iso, t); }); }
   function days() {
-    var out = [], start = crimeaNow().h >= CLOSE - 1 ? 1 : 0;
+    var out = [], start = nowMin() >= CLOSE * 60 - 30 ? 1 : 0;
     for (var i = start; i < start + 7; i++) out.push(dayInfo(i));
     return out;
   }
-  function times() { var t = []; for (var h = OPEN; h < CLOSE; h++) t.push((h < 10 ? '0' : '') + h + ':00'); return t; }
-  function isPast(t) { // на сегодня нельзя выбрать время, которое уже прошло
-    if (!bk.day || bk.day.indexOf('сегодня') !== 0) return false;
-    return parseInt(t, 10) <= crimeaNow().h;
-  }
+  function isPast(t) { return !!bk.date && !slotFree(bk.date, t); } // прошло или занято
   function pill(label, on, pick) { var b = el('button', { type: 'button', 'class': 'pill', 'aria-pressed': String(on) }, label); b.onclick = pick; return b; }
   function render() {
     fill('oService', SERVICES.map(function (s) {
@@ -1439,22 +1447,26 @@ html.lenis,html.lenis body{height:auto}
     fill('oCar', TN.map(function (t) { return pill(t, bk.car === t, function () { bk.car = t; render(); }); }));
     fill('oRad', RADII.map(function (r) { return pill(r, bk.radius === r, function () { bk.radius = r; render(); }); }));
     var ds = days();
-    if (!ds.some(function (d) { return d.value === bk.day; })) bk.day = null;
+    if (!ds.some(function (d) { return d.value === bk.day; })) { bk.day = null; bk.date = null; }
+    if (bk.date && bk.time && bk.time !== 'любое время' && isPast(bk.time)) bk.time = null; // время заняли, пока клиент выбирал
     fill('oDay', ds.map(function (d) {
+      var free = dayFree(d.iso);
       var b = el('button', { type: 'button', 'class': 'day', 'aria-pressed': String(bk.day === d.value) });
-      b.appendChild(el('b', {}, d.label)); b.appendChild(el('span', {}, d.sub));
-      b.onclick = function () { bk.day = d.value; bk.date = d.iso; if (bk.time && isPast(bk.time)) bk.time = null; render(); };
+      b.appendChild(el('b', {}, d.label)); b.appendChild(el('span', {}, free ? d.sub : 'всё занято'));
+      if (!free && bk.day !== d.value) b.disabled = true;
+      b.onclick = function () { bk.day = d.value; bk.date = d.iso; if (bk.time && bk.time !== 'любое время' && isPast(bk.time)) bk.time = null; render(); };
       return b;
     }));
     fill('oTime', times().map(function (t) {
       var b = pill(t, bk.time === t, function () { bk.time = t; render(); });
-      if (isPast(t)) b.disabled = true;
+      if (isPast(t)) { b.disabled = true; if (bk.date && isFull(bk.date, t)) b.title = 'Это время занято'; }
       return b;
     }).concat([pill('Любое', bk.time === 'любое время', function () { bk.time = 'любое время'; render(); })]));
     var sum = [bk.service, [bk.car, bk.radius].filter(Boolean).join(' '), bk.price, [bk.day, bk.time].filter(Boolean).join(', ')].filter(Boolean);
     fill('mSum', sum.map(function (s) { return el('span', {}, s); }));
     fill('qkSum', sum.map(function (s) { return el('span', {}, s); }));
   }
+  var FAIL_TXT = $('mFail').textContent;
   function go(s, back) {
     step = s;
     steps.forEach(function (f) { f.hidden = Number(f.dataset.step) !== s; f.classList.toggle('back', !!back); });
@@ -1463,7 +1475,7 @@ html.lenis,html.lenis body{height:auto}
     if (!quick) $('mProg').style.width = ((s + 1) * 25) + '%';
     $('mNav').hidden = done || quick || s === 0;
     $('mNext').textContent = s === 3 ? 'Отправить заявку' : 'Далее';
-    $('mFail').classList.remove('show');
+    if (!back || s !== 2) { $('mFail').classList.remove('show'); $('mFail').textContent = FAIL_TXT; }
     if (quick) {
       var on = isOpen();
       $('qkTitle').textContent = bk.time ? (bk.day ? bk.day.split(',')[0].replace(/^./, function (c) { return c.toUpperCase(); }) + ' в ' + bk.time : bk.time) : on ? 'Перезвоним за 5 минут' : 'Перезвоним утром';
@@ -1497,7 +1509,7 @@ html.lenis,html.lenis body{height:auto}
     sendLead(lead).then(function () {
       $('mDoneTxt').textContent = 'Спасибо, ' + lead.name + '! Перезвоним на ' + form.phone.value + ', чтобы подтвердить запись: ' + lead.day + (lead.time === 'любое время' ? '' : ', ' + lead.time) + '.';
       go(4); confetti(); goal('lead_full');
-    }).catch(function () { $('mFail').classList.add('show'); })
+    }).catch(function (err) { if (err && err.status === 409) return slotTaken(); $('mFail').classList.add('show'); })
       .then(function () { btn.classList.remove('busy'); if (step === 3) btn.textContent = 'Отправить заявку'; });
   });
 
@@ -1519,8 +1531,21 @@ html.lenis,html.lenis body{height:auto}
       $('mDoneTxt').textContent = 'Спасибо, ' + lead.name + '! ' + (isOpen() ? 'Перезвоним на ' + form.qphone.value + ' в ближайшие минуты.' : 'Перезвоним на ' + form.qphone.value + ' утром, после 08:00.') +
         (lead.day && lead.time ? ' Вы хотели: ' + lead.day + ', ' + lead.time + '.' : '');
       go(4); confetti(); goal('lead_quick');
-    }).catch(function () { $('mFail').classList.add('show'); })
+    }).catch(function (err) { if (err && err.status === 409) return slotTaken(); $('mFail').classList.add('show'); })
       .then(function () { btn.classList.remove('busy'); btn.textContent = 'Перезвоните мне'; });
+  }
+  // пока клиент заполнял форму, на это время записали последнюю машину: обновляем занятость и просим выбрать другое время
+  function slotTaken() {
+    bk.time = null;
+    if (step === QS) { // из быстрой заявки: переносим имя, телефон и согласие в полную форму
+      if (!form.client.value) form.client.value = form.qclient.value;
+      if (!form.phone.value) form.phone.value = form.qphone.value;
+      form.consent.checked = form.qconsent.checked;
+    }
+    return loadQueue(true).then(function () {
+      render(); go(2, true);
+      var f = $('mFail'); f.textContent = 'Это время только что заняли. Выберите другое, данные сохранятся.'; f.classList.add('show');
+    });
   }
   $('mPick').onclick = function () { go(bk.car ? 2 : bk.service ? 1 : 0); };
   modal.querySelector('[data-quick]').onclick = function () { go(QS, true); };
@@ -1542,6 +1567,11 @@ html.lenis,html.lenis body{height:auto}
     form.reset(); mReset(); kReset();
     form.querySelectorAll('.err').forEach(function (n) { n.classList.remove('err'); });
     render();
+    loadQueue(true).then(function () { // свежая занятость времени
+      if (modal.hidden) return;
+      var had = bk.time; render();
+      if (had && !bk.time && step === QS) go(QS); // выбранное на плашке время успели занять
+    });
     lastFocus = document.activeElement;
     modal.hidden = false; document.body.classList.add('locked'); menu(false); if (lenis) lenis.stop();
     go(QS); goal('book_open');
@@ -1569,17 +1599,16 @@ html.lenis,html.lenis body{height:auto}
   // ---- Плашка «Сегодня» на первом экране: очередь из CRM (мастер ставит её кнопками) и ближайшее время для записи.
   // Без CRM (сейчас на Vercel) показываем только часы работы и ближайшие часы для записи.
   var Q = null;
-  function pad(h) { return (h < 10 ? '0' : '') + h + ':00'; }
-  function nextSlots(k) {
-    var n = crimeaNow(), out = [], busy = (Q && Q.busy) || [], h;
-    if (n.h < CLOSE) {
-      for (h = Math.max(OPEN, n.h + (n.m >= 30 ? 2 : 1)); h < CLOSE && out.length < k; h++) if (busy.indexOf(pad(h)) < 0) out.push({ t: pad(h), d: 0 });
+  function nextSlots(k) { // ближайшие свободные слоты: сегодня не раньше чем через час, иначе завтра
+    var out = [], from = nowMin() + 60, iso;
+    for (var d = 0; d < 7 && !out.length; d++) {
+      iso = dayInfo(d).iso;
+      times().forEach(function (t) { if (out.length < k && (d || toMin(t) >= from) && !isFull(iso, t)) out.push({ t: t, d: d }); });
     }
-    if (!out.length) for (h = OPEN; out.length < k; h++) out.push({ t: pad(h), d: 1 });
-    return out;
+    return out.length ? out : [{ t: hm(OPEN * 60), d: 1 }];
   }
   function renderToday() {
-    var n = crimeaNow(), on = isOpen(), w = Q ? Q.wait : null, slots = nextSlots(3), tomorrow = slots[0].d === 1, title, sub;
+    var n = crimeaNow(), on = isOpen(), w = Q ? Q.wait : null, slots = nextSlots(3), tomorrow = slots[0].d >= 1, title, sub;
     if (!on) { title = n.h < OPEN ? 'Сейчас закрыто, откроемся в 08:00' : 'Сейчас закрыто, завтра с 08:00'; sub = (tomorrow ? 'Завтра' : 'Сегодня') + ' можно записаться на'; }
     else if (w === 0) { title = 'Сейчас свободно, приезжайте'; sub = 'Или запишитесь на время'; }
     else if (w > 0) { title = 'Очередь ' + (w >= 90 ? 'больше 1,5 часа' : w >= 60 ? 'около часа' : 'около ' + w + ' мин'); sub = 'Без очереди, по записи'; }
@@ -1591,14 +1620,14 @@ html.lenis,html.lenis body{height:auto}
     $('tdSub').textContent = sub + ':';
     document.querySelectorAll('[data-open-dot]').forEach(function (d) { d.classList.toggle('on', on && w !== -1); });
     fill('tdSlots', slots.map(function (sl) {
-      var b = el('button', { type: 'button', 'aria-label': 'Записаться ' + (sl.d ? 'завтра' : 'сегодня') + ' на ' + sl.t }, sl.t);
+      var di0 = dayInfo(sl.d), b = el('button', { type: 'button', 'aria-label': 'Записаться ' + di0.value + ' на ' + sl.t }, sl.d > 1 ? di0.label + ' ' + sl.t : sl.t);
       b.onclick = function () { var di = dayInfo(sl.d); openBook(null, { day: di.value, date: di.iso, time: sl.t }); goal('queue_slot'); };
       return b;
     }));
   }
-  function loadQueue() {
-    if (!BOOKING.endpoint || document.hidden) return;
-    fetch('/api/queue').then(function (r) { return r.ok ? r.json() : null; })
+  function loadQueue(force) {
+    if (!BOOKING.endpoint || (document.hidden && !force)) return Promise.resolve();
+    return fetch('/api/queue').then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) { Q = j && j.ok ? j : null; renderToday(); }).catch(function () {});
   }
   renderToday(); loadQueue();
