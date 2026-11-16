@@ -365,7 +365,10 @@ td.na{color:#6b6b6b}
 .folder:nth-child(2) .ftab{--tc:var(--f-gold);--tl:280px}
 .f-in{display:grid;grid-template-columns:repeat(12,1fr);gap:24px;padding:32px var(--m) 56px;min-height:80svh;align-items:start}
 .folder:last-child .f-in{min-height:0}
-.f-in .ba{grid-column:1/8}
+.f-in .ba,.f-in .pair{grid-column:1/8}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pair figure{position:relative;margin:0}
+.pair img{display:block;width:100%;height:auto;aspect-ratio:3/4;object-fit:cover;background:#262626}
 .f-in .f-text{grid-column:9/13;display:grid;gap:20px}
 .f-text h3{font-size:var(--step-lead);letter-spacing:-0.02em;line-height:1.15}
 @media (max-width:860px){
@@ -933,43 +936,16 @@ html.lenis,html.lenis body{height:auto}
   </div>
   <div class="folders">
     <article class="folder">
-      <div class="ftab">Ремонт</div>
+      <div class="ftab" style="--tc:var(--f-gold)">Покраска</div>
       <div class="f-in">
-        <div class="ba">
-          <div class="layer"><svg viewBox="0 0 200 200" role="img" aria-label="Диск после ремонта: ровная кромка" style="--rim:#d3d6db"><use href="#rimBack" width="200" height="200"/><use href="#caliper" width="200" height="200"/><use href="#rimFront" width="200" height="200"/></svg></div>
-          <div class="layer ba-before"><svg viewBox="0 0 200 200" role="img" aria-label="Диск до ремонта: бордюрные потёртости" style="--rim:#9a948a"><use href="#rimBack" width="200" height="200"/><use href="#caliper" width="200" height="200"/><use href="#rimFront" width="200" height="200"/><path d="M49.8 49.8A71 71 0 0 0 29.3 93.8" stroke="#3b3631" stroke-width="9" fill="none"/><path d="M58 38L72 46M44 52L60 58M34 68L48 72M30 84l14 2" stroke="#e8e3da" stroke-width="1.6"/></svg></div>
-          <div class="ba-line"></div>
-          <div class="ba-handle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M9 6l-6 6 6 6M15 6l6 6-6 6"/></svg></div>
-          <div class="tag l">До</div><div class="tag r">После</div>
-          <input type="range" min="0" max="100" step="1" value="50" aria-label="Сравнить до и после ремонта">
+        <div class="pair">
+          <figure><img src="photos/paint-before.jpg" width="900" height="1200" loading="lazy" decoding="async" alt="Литой диск Mercedes AMG до покраски: потёртое покрытие и сколы"><span class="tag l">До</span></figure>
+          <figure><img src="photos/paint-after.jpg" width="900" height="1200" loading="lazy" decoding="async" alt="Тот же диск после покраски: чёрный глянец и светлая лицевая сторона"><span class="tag r">После</span></figure>
         </div>
         <div class="f-text">
-          <h3>Бордюрные потёртости и вмятины</h3>
-          <p>Правим литые и штампованные диски, завариваем трещины аргоном, восстанавливаем кромку после бордюра. Двигайте ползунок, чтобы сравнить.</p>
-          <p><em class="ph">[Описание работы: марка авто, размер диска, срок]</em></p>
-          <a href="#contacts" class="btn" data-book="Ремонт дисков">Записаться на ремонт</a>
-        </div>
-      </div>
-    </article>
-    <article class="folder">
-      <div class="ftab">Покраска</div>
-      <div class="f-in">
-        <div class="ba">
-          <div class="layer"><svg viewBox="0 0 200 200" role="img" aria-label="Диск после покраски" id="rimAfter" style="--rim:#3c3f46"><use href="#rimBack" width="200" height="200"/><use href="#caliper" width="200" height="200"/><use href="#rimFront" width="200" height="200"/></svg></div>
-          <div class="layer ba-before"><svg viewBox="0 0 200 200" role="img" aria-label="Диск до покраски" id="rimBefore" style="--rim:#7a6f60"><use href="#rimBack" width="200" height="200"/><use href="#caliper" width="200" height="200"/><use href="#rimFront" width="200" height="200"/><circle cx="150" cy="58" r="8" fill="#4f4538"/><circle cx="62" cy="150" r="6" fill="#b8a98f"/><path d="M138 128L156 140M44 112l10-4" stroke="#4f4538" stroke-width="3"/></svg></div>
-          <div class="ba-line"></div>
-          <div class="ba-handle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M9 6l-6 6 6 6M15 6l6 6-6 6"/></svg></div>
-          <div class="tag l">До</div><div class="tag r">После</div>
-          <input type="range" min="0" max="100" step="1" value="50" aria-label="Сравнить до и после покраски">
-        </div>
-        <div class="f-text">
-          <h3 id="counter"></h3>
+          <h3>Диски Mercedes AMG</h3>
           <p>Снимаем старую краску, грунтуем и красим порошковой краской. Такое покрытие прочнее обычной краски.</p>
-          <p id="wCaption"></p>
-          <div class="carousel">
-            <button type="button" class="arrow" aria-label="Предыдущая работа" id="prevWork"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
-            <button type="button" class="arrow" aria-label="Следующая работа" id="nextWork"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
-          </div>
+          <a href="#contacts" class="btn" data-book="Покраска дисков">Записаться на покраску</a>
         </div>
       </div>
     </article>
@@ -1248,37 +1224,6 @@ html.lenis,html.lenis body{height:auto}
   });
   document.querySelectorAll('[data-tab]').forEach(function (a) { a.addEventListener('click', function () { openTab(Number(a.dataset.tab)); }); });
 
-  // ---- До / после: ползунки
-  var sliders = [];
-  document.querySelectorAll('.ba').forEach(function (box) {
-    var input = box.querySelector('input[type=range]');
-    function set(v) {
-      box.querySelector('.ba-before').style.clipPath = 'inset(0 ' + (100 - v) + '% 0 0)';
-      box.querySelector('.ba-line').style.left = v + '%';
-      box.querySelector('.ba-handle').style.left = v + '%';
-    }
-    input.addEventListener('input', function () { set(Number(input.value)); });
-    sliders.push({ reset: function () { input.value = 50; set(50); } });
-  });
-
-  // ---- Работы по покраске: [название, цвет до, цвет после, описание]
-  var WORKS = [
-    ['Графит', '#7a6f60', '#3c3f46', '[Описание работы 1: марка авто, размер диска, срок]'],
-    ['Чёрный глянец', '#9a948a', '#17181b', '[Описание работы 2: марка авто, размер диска, срок]'],
-    ['Красный', '#6b5a4a', '#b3211f', '[Описание работы 3: марка авто, размер диска, срок]']
-  ];
-  var wi = 0;
-  function showWork(i) {
-    wi = (i + WORKS.length) % WORKS.length;
-    var w = WORKS[wi];
-    paint('rimBefore', w[1]); paint('rimAfter', w[2]);
-    $('counter').textContent = 'Покраска в цвет «' + w[0] + '»';
-    $('wCaption').innerHTML = ''; $('wCaption').appendChild(el('em', { 'class': 'ph' }, w[3]));
-    if (sliders[1]) sliders[1].reset();
-  }
-  $('prevWork').onclick = function () { showWork(wi - 1); };
-  $('nextWork').onclick = function () { showWork(wi + 1); };
-
   // ---- Цвет дисков
   var SW = [['Серебристый', '#c9ccd2'], ['Графит', '#3c3f46'], ['Чёрный глянец', '#17181b'], ['Белый', '#ebe9e4'], ['Красный', '#b3211f'], ['Синий', '#2456b8'], ['Золотой', '#c49a3c'], ['Оранжевый', '#ff6a1a']];
   var cWheel = $('cWheel');
@@ -1378,7 +1323,7 @@ html.lenis,html.lenis body{height:auto}
     $('pkNote').textContent = pk == null ? 'Для R' + R[cr] + ' цену назовём по телефону.' : 'Легковой, R' + R[cr] + ', по прайсу. Мойка колёс отдельно, 100 ₽ за колесо.';
   }
 
-  showWork(0); showColor(2); renderCalc();
+  showColor(2); renderCalc();
 
   // ---- Как проходит визит: гармошка
   var stages = Array.prototype.slice.call(document.querySelectorAll('.stage'));
@@ -1796,7 +1741,6 @@ html.lenis,html.lenis body{height:auto}
 
     // диски до/после: первая папка уходит в тень, когда на неё наезжает вторая (только ПК)
     gsap.matchMedia().add('(min-width: 861px)', function () {
-      gsap.to('.folder:nth-child(1) .f-in', { scale: 0.94, filter: 'brightness(.45)', transformOrigin: '50% 0%', ease: 'none', scrollTrigger: { trigger: '.folder:nth-child(2)', start: 'top bottom', end: 'top 20%', scrub: true } });
     });
 
     // цвет дисков: колесо выкатывается справа на растущий красный круг
