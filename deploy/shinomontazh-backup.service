@@ -1,0 +1,6 @@
+[Unit]
+Description=Шиномонтаж PRO: копия базы
+
+[Service]
+Type=oneshot
+ExecStart=/srv/shinomontazh/deploy/backup.sh

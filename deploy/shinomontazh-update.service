@@ -1,0 +1,6 @@
+[Unit]
+Description=Шиномонтаж PRO: забрать обновления из GitHub
+
+[Service]
+Type=oneshot
+ExecStart=/srv/shinomontazh/deploy/update.sh

@@ -9,7 +9,7 @@ const TTL = 12 * 3600;
 
 // В интернете (Vercel) короткие пароли не принимаем: владельцу и мастеру нужно не меньше 10 символов.
 // Локально (свой ПК) можно короткий, например 8585.
-const MIN_PW = process.env.VERCEL ? 10 : 1;
+const MIN_PW = (process.env.VERCEL || process.env.NODE_ENV === 'production') ? 10 : 1;
 function okPw(p) { return !!p && p.length >= MIN_PW; }
 function configured() {
   return !!(process.env.CRM_SECRET && process.env.CRM_SECRET.length >= 16 && okPw(process.env.CRM_OWNER_PASSWORD));

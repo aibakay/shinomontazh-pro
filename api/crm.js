@@ -7,6 +7,7 @@
 const store = require('./_lib/store');
 const auth = require('./_lib/auth');
 const schema = require('./_lib/schema');
+const tg = require('./_lib/tg'); // тревоги владельцу в Telegram
 const log = require('./_lib/log'); // журнал действий: кто что сделал (видит только владелец)
 const plates = require('./_lib/plates'); // проверка госномеров: что не номер — в марку, имя или телефон
 const { PRICES } = require('./_lib/seed');
@@ -55,19 +56,14 @@ async function fail(ip, isPin) {
 }
 // Короткое сообщение владельцу в тот же Telegram, куда идут заявки. Ошибки не мешают входу.
 async function alert(text) {
-  const token = process.env.TELEGRAM_BOT_TOKEN, chat = process.env.TELEGRAM_CHAT_ID;
-  if (!token || !chat || typeof fetch !== 'function') return;
-  try {
-    await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chat, text: text }), signal: AbortSignal.timeout(4000)
-    });
-  } catch (e) { /* не дошло — не страшно */ }
+  if (!tg.configured() || typeof fetch !== 'function') return;
+  await tg.send(text, { timeout: 4000 });
 }
 // Адрес клиента. На Vercel заголовок x-forwarded-for ставит сам Vercel (подделку он затирает);
-// на своём сервере заголовку не верим — берём адрес соединения.
+// на своём сервере за nginx (TRUST_PROXY=1) — x-real-ip, его nginx ставит сам и затирает подделку;
+// без nginx заголовку не верим — берём адрес соединения.
 function clientIp(req) {
-  if (process.env.VERCEL) return String(req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
+  if (process.env.VERCEL || process.env.TRUST_PROXY === '1') return String(req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
   return (req.socket && req.socket.remoteAddress) || 'unknown';
 }
 

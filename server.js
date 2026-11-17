@@ -21,8 +21,8 @@ const ROOT = __dirname;
 
 const ROUTES = { '/api/lead': require('./api/lead'), '/api/crm': require('./api/crm'), '/api/queue': require('./api/queue') };
 // Отдаём наружу только страницы сайта и CRM — не код сервера, не базу и не настройки
-const PUBLIC = [/^\/$/, /^\/(index|privacy|consent)\.html$/, /^\/crm\/(index\.html)?$/, /^\/(photos|assets)\/[\w\-.]+$/];
-const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.avif': 'image/avif', '.svg': 'image/svg+xml', '.mp4': 'video/mp4', '.webm': 'video/webm' };
+const PUBLIC = [/^\/$/, /^\/(index|privacy|consent)\.html$/, /^\/(favicon\.svg|og\.jpg|robots\.txt|sitemap\.xml)$/, /^\/crm\/(index\.html)?$/, /^\/(photos|assets)\/[\w\-.]+$/];
+const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.avif': 'image/avif', '.svg': 'image/svg+xml', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml; charset=utf-8', '.mp4': 'video/mp4', '.webm': 'video/webm' };
 
 function shim(res) {
   res.status = function (code) { res.statusCode = code; return res; };
@@ -65,7 +65,8 @@ const server = http.createServer(function (req, res) {
 
 const port = Number(process.env.PORT) || 3000;
 // Слушаем все сети компьютера: CRM открывается и с планшета в той же Wi-Fi
-server.listen(port, '0.0.0.0', function () {
+// HOST=127.0.0.1 на сервере за nginx: снаружи порт 3000 не виден
+server.listen(port, process.env.HOST || '0.0.0.0', function () {
   console.log('Шиномонтаж PRO: http://localhost:' + port + '  ·  CRM: http://localhost:' + port + '/crm/');
   const nets = require('os').networkInterfaces();
   for (const name in nets) for (const n of nets[name]) {

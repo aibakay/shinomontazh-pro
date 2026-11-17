@@ -1,0 +1,9 @@
+[Unit]
+Description=Шиномонтаж PRO: копия базы каждую ночь
+
+[Timer]
+OnCalendar=*-*-* 03:30
+Persistent=true
+
+[Install]
+WantedBy=timers.target

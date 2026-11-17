@@ -1,0 +1,22 @@
+[Unit]
+Description=Шиномонтаж PRO: сайт и CRM
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+User=shino
+Group=shino
+WorkingDirectory=/srv/shinomontazh
+EnvironmentFile=/etc/shinomontazh.env
+Environment=NODE_ENV=production HOST=127.0.0.1 PORT=3000 TRUST_PROXY=1
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/srv/shinomontazh
+
+[Install]
+WantedBy=multi-user.target

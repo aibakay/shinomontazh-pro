@@ -7,6 +7,7 @@
 // Если подключена база CRM, заявка ещё и попадает в раздел «Запись» со статусом «Новая».
 const store = require('./_lib/store');
 const slots = require('./_lib/slots'); // до slots.CAPACITY машин на одно время: на занятое время заявку не принимаем
+const tg = require('./_lib/tg'); // Telegram напрямую или через ретранслятор
 const log = require('./_lib/log'); // журнал действий: заявка с сайта попадает туда от имени «Сайт»
 
 const hits = new Map(); // защита от спама: не больше 5 заявок с одного адреса за 10 минут
@@ -33,11 +34,11 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ ok: false, error: 'method' });
   }
 
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
-  if ((!token || !chatId) && !store.available()) return res.status(500).json({ ok: false, error: 'not configured' });
+  const tgOn = tg.configured();
+  if (!tgOn && !store.available()) return res.status(500).json({ ok: false, error: 'not configured' });
 
-  const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
+  // На Vercel адрес клиента ставит Vercel, на своём сервере — nginx (TRUST_PROXY=1)
+  const ip = String(req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
   if (tooMany(ip)) return res.status(429).json({ ok: false, error: 'too many' });
 
   let b = req.body;
@@ -106,20 +107,8 @@ module.exports = async function handler(req, res) {
   ].filter(l => l !== null);
 
   // 2) в Telegram. Если не дошло, но заявка уже в CRM — клиенту всё равно отвечаем «принято».
-  if (!token || !chatId) return savedToCrm ? res.status(200).json({ ok: true }) : res.status(500).json({ ok: false, error: 'not configured' });
-  try {
-    const r = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text: lines.join('\n'), parse_mode: 'HTML', disable_web_page_preview: true })
-    });
-    if (!r.ok) {
-      console.error('Telegram ответил ошибкой', r.status, await r.text());
-      if (!savedToCrm) return res.status(502).json({ ok: false, error: 'telegram' });
-    }
-  } catch (e) {
-    console.error('Не удалось связаться с Telegram', e);
-    if (!savedToCrm) return res.status(502).json({ ok: false, error: 'telegram' });
-  }
+  if (!tgOn) return savedToCrm ? res.status(200).json({ ok: true }) : res.status(500).json({ ok: false, error: 'not configured' });
+  const sent = await tg.send(lines.join('\n'), { html: true });
+  if (!sent && !savedToCrm) return res.status(502).json({ ok: false, error: 'telegram' });
   return res.status(200).json({ ok: true });
 };

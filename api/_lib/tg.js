@@ -1,0 +1,45 @@
+// Отправка сообщения в Telegram (заявки с сайта, тревоги CRM).
+// Два способа:
+//  • напрямую: TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID (так работает Vercel);
+//  • через ретранслятор: TELEGRAM_RELAY_URL + TELEGRAM_RELAY_SECRET — для сервера в России,
+//    откуда api.telegram.org открывается ненадёжно. Ретранслятор — функция api/tg.js на Vercel,
+//    она сама знает токен бота и чат. Сам токен на российском сервере тогда не нужен.
+function configured() {
+  return !!((process.env.TELEGRAM_RELAY_URL && process.env.TELEGRAM_RELAY_SECRET) ||
+    (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID));
+}
+
+// Возвращает true, если Telegram принял сообщение.
+async function send(text, opts) {
+  opts = opts || {};
+  const html = !!opts.html;
+  const timeout = opts.timeout || 8000;
+  const relay = process.env.TELEGRAM_RELAY_URL, secret = process.env.TELEGRAM_RELAY_SECRET;
+  try {
+    let r;
+    if (relay && secret) {
+      r = await fetch(relay, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Relay-Secret': secret },
+        body: JSON.stringify({ text: text, html: html }),
+        signal: AbortSignal.timeout(timeout)
+      });
+    } else {
+      const token = process.env.TELEGRAM_BOT_TOKEN, chat = process.env.TELEGRAM_CHAT_ID;
+      if (!token || !chat) return false;
+      const body = { chat_id: chat, text: text, disable_web_page_preview: true };
+      if (html) body.parse_mode = 'HTML';
+      r = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body), signal: AbortSignal.timeout(timeout)
+      });
+    }
+    if (!r.ok) console.error('Telegram ответил ошибкой', r.status, await r.text().catch(() => ''));
+    return r.ok;
+  } catch (e) {
+    console.error('Не удалось связаться с Telegram', e && e.message);
+    return false;
+  }
+}
+
+module.exports = { configured, send };
