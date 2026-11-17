@@ -257,6 +257,23 @@ p{margin:0}
 @media (max-width:1100px){.pk-1{grid-column:1/13;min-height:0}.pk-2{grid-column:1/7}.pk-3{grid-column:7/13}}
 @media (max-width:760px){.pack{display:grid;grid-template-columns:1fr}.pk-1,.pk-2,.pk-3{grid-column:auto;min-height:0}.pk-bot{padding-top:8px}}
 
+/* гарантия */
+.wr{display:grid;grid-template-columns:repeat(12,1fr);gap:8px;margin-top:48px}
+.wr-b{padding:clamp(24px,2.6vw,40px);display:grid;gap:20px;align-content:start}
+.wr-b h3{font-size:var(--step-lead);letter-spacing:-0.02em;line-height:1.15}
+.wr-t{font-family:var(--display);font-weight:700;font-size:clamp(2.5rem,1.6rem + 3vw,4.5rem);letter-spacing:-0.04em;line-height:1}
+.wr-b h4{font-size:var(--step-body);font-weight:600;margin-bottom:8px}
+.wr-b ul{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+.wr-b li::before{content:"";display:inline-block;width:.55em;height:.55em;border-radius:50%;background:currentColor;margin-right:10px;vertical-align:.08em}
+.wr-cols{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.wr-1{grid-column:1/7;background:var(--accent);color:#fff}
+.wr-2{grid-column:7/13;background:var(--surface-2)}
+.wr-2 .wr-no{color:var(--muted)}
+.wr-1 .wr-no{color:#ffe3e5}
+.wr-note{margin-top:24px;max-width:70ch;color:var(--muted)}
+@media (max-width:1100px){.wr-cols{grid-template-columns:1fr}}
+@media (max-width:760px){.wr{grid-template-columns:1fr}.wr-1,.wr-2{grid-column:auto}}
+
 /* мастерская: фото в круге (мотив), мастера — круги поменьше */
 #team[hidden]{display:none}
 #team .wrap > .st:first-child{display:grid;gap:20px}
@@ -999,6 +1016,34 @@ html.lenis,html.lenis body{height:auto}
   </div>
 </section>
 
+<section class="sec" id="warranty">
+  <div class="wrap">
+    <div class="price-head st">
+      <h2 class="h2">Гарантия</h2>
+      <p class="lead">Если что-то пошло не так по нашей вине, исправим бесплатно. Сохраните чек или гарантийный талон.</p>
+    </div>
+    <div class="wr st">
+      <article class="wr-b wr-1">
+        <h3>Покраска и проточка дисков</h3>
+        <p class="wr-t">1 год</p>
+        <div class="wr-cols">
+          <div><h4>Исправим бесплатно</h4><ul><li>краска или лак отслоились, вздулись, пошли пузырями</li><li>появились трещины в покрытии</li><li>цвет заметно изменился</li></ul></div>
+          <div class="wr-no"><h4>Не гарантийный случай</h4><ul><li>сколы от камней и царапины</li><li>удары о бордюры и ямы, ДТП</li><li>кислотная или абразивная химия для дисков</li></ul></div>
+        </div>
+      </article>
+      <article class="wr-b wr-2">
+        <h3>Шиномонтаж и ремонт колёс</h3>
+        <p class="wr-t">30 дней</p>
+        <div class="wr-cols">
+          <div><h4>Исправим бесплатно</h4><ul><li>появилось биение руля, нужна повторная балансировка</li><li>колесо травит по борту или через наш вентиль</li><li>отремонтированный у нас прокол пропускает воздух</li><li>подтянем колёсные болты</li></ul></div>
+          <div class="wr-no"><h4>Не гарантийный случай</h4><ul><li>новые проколы, порезы, грыжи</li><li>удары о ямы и бордюры, ДТП</li><li>колесо потом снимали в другом месте</li><li>езда на спущенной шине</li></ul></div>
+        </div>
+      </article>
+    </div>
+    <p class="wr-note st">Срок считается со дня работы, для покраски со дня выдачи дисков. Потеряли талон? Найдём работу в нашей базе по госномеру, марке машины или телефону. Через 50–100 км после шиномонтажа проверим затяжку колёс бесплатно.</p>
+  </div>
+</section>
+
 <section class="sec" id="faq">
   <div class="wrap faq">
     <h2 class="h2">Вопросы</h2>
@@ -1009,7 +1054,7 @@ html.lenis,html.lenis body{height:auto}
       <details name="faq"><summary>Цена в калькуляторе окончательная?<i class="pm" aria-hidden="true"></i></summary><p>Калькулятор считает по прайсу.</p></details>
       <details name="faq"><summary>Когда пора делать сход-развал?<i class="pm" aria-hidden="true"></i></summary><ul><li>руль уводит в сторону или не возвращается в центр;</li><li>шины стираются неравномерно;</li><li>меняли шины, ремонтировали подвеску или рулевое;</li><li>машина хуже держит дорогу.</li></ul></details>
       <details name="faq"><summary>Можно ли восстановить диск после бордюра?<i class="pm" aria-hidden="true"></i></summary><p>Да. Правим диск, завариваем трещины аргоном, если нужно, делаем проточку и покраску.</p></details>
-      <details name="faq"><summary>Какая гарантия?<i class="pm" aria-hidden="true"></i></summary><p><em class="ph">[условия гарантии]</em></p></details>
+      <details name="faq"><summary>Какая гарантия?<i class="pm" aria-hidden="true"></i></summary><p>На покраску и проточку дисков 1 год, на шиномонтаж и ремонт колёс 30 дней. Если недостаток по нашей вине, исправим бесплатно. <a href="#warranty">Подробнее о гарантии</a>.</p></details>
       <details name="faq"><summary>Храните шины между сезонами?<i class="pm" aria-hidden="true"></i></summary><p>Да, храним шины и колёса между сезонами. От 1 500 ₽.</p></details>
     </div>
   </div>
@@ -1060,7 +1105,7 @@ html.lenis,html.lenis body{height:auto}
     <div class="foot-cols">
       <nav aria-label="Разделы в подвале">
         <a href="#services">Услуги</a><a href="#calc">Цены</a><a href="#price">Весь прайс</a><a href="#discs">Диски</a>
-        <a href="#season-pack">К сезону</a><a href="#colors">Цвета</a><a href="#how">Как проходит визит</a><a href="#faq">Вопросы</a><a href="#contacts">Контакты</a>
+        <a href="#season-pack">К сезону</a><a href="#colors">Цвета</a><a href="#how">Как проходит визит</a><a href="#warranty">Гарантия</a><a href="#faq">Вопросы</a><a href="#contacts">Контакты</a>
       </nav>
       <address>
         <span>Симферополь, ул. Трансформаторная, 6</span>

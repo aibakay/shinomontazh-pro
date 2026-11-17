@@ -1153,7 +1153,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       var cols = [{ t: '№' }, { t: 'Выдано' }, { t: 'Клиент' }, { t: 'Диски' }, { t: 'Цвет' }, { t: 'Сумма', r: 1 }, { t: '' }];
       return out + table(cols, list.map(function (o) {
         var r = ['<b>' + pNo(o) + '</b>', dm(o.issued), h(o.name || '') + (o.phone ? ' ' + phoneLink(o.phone) : ''), h(pDesc(o)), swatch(o.color) + h(o.color), '<span class="num">' + money(o.price) + '</span>',
-          '<button class="btn sec small" type="button" data-pprint="' + o.id + '">Квитанция</button>'];
+          '<span style="display:inline-flex;gap:6px"><button class="btn sec small" type="button" data-pprint="' + o.id + '">Квитанция</button><button class="btn sec small" type="button" data-warr="p:' + o.id + '">Гарантия</button></span>'];
         r._open = 'paint:' + o.id; return r;
       }));
     }
@@ -1624,6 +1624,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       '<table class="tot"><tr><td>Итого:</td><td>' + rub(total) + '</td></tr><tr><td>' + (rate ? 'В том числе НДС (' + rate + '%):' : 'Без налога (НДС)') + '</td><td>' + (rate ? rub(vat) : '—') + '</td></tr></table>' +
       '<p>Всего оказано услуг ' + js.length + ', на сумму ' + rub(total) + ' руб.<br><b>' + rubWords(total) + '</b></p>' +
       '<p>Вышеперечисленные услуги выполнены полностью и в срок. Заказчик претензий по объёму, качеству и срокам оказания услуг не имеет.</p>' +
+      '<p>Гарантия: шиномонтаж, балансировка и ремонт колёс 30 дней, покраска и проточка дисков 1 год со дня оказания услуг. Гарантия не распространяется на проколы, порезы, удары о ямы и бордюры, ДТП и повреждения после ремонта колеса в другом месте.</p>' +
       '<div class="sign act"><div><b>Исполнитель</b><br><br>' + (ip ? 'Индивидуальный предприниматель' : '____________________') + '<br><small>должность</small><br><br>____________________ / ' + (h(s.head || '') || '____________________') + '<br><small>подпись / расшифровка подписи</small><br><small>М. П. (при наличии)</small></div>' +
       '<div><b>Заказчик</b><br><br>____________________<br><small>должность</small><br><br>____________________ / ' + (h(c.contact || '') || '____________________') + '<br><small>подпись / расшифровка подписи</small><br><small>М. П. (при наличии)</small></div></div></div>';
     window.print();
@@ -1838,6 +1839,8 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       (hk ? '<button type="button" class="btn sec" data-hist="' + h(hk) + '">История</button>' : '') +
       (coll === 'storage' && id ? '<button type="button" class="btn sec" data-print="' + id + '">Квитанция</button>' : '') +
       (coll === 'paint' && id ? '<button type="button" class="btn sec" data-pprint="' + id + '">Квитанция и бирка</button>' : '') +
+      (coll === 'paint' && id && doc.status === 'Выдано' ? '<button type="button" class="btn sec" data-warr="p:' + id + '">Гарантия</button>' : '') +
+      (coll === 'jobs' && id && doc.kind !== 'sale' ? '<button type="button" class="btn sec" data-warr="j:' + id + '">Гарантия</button>' : '') +
       (coll === 'jobs' && id && owner() && doc.pay === 'Безнал' && doc.company ? (jobInvoice(id) ? '<button type="button" class="btn sec" data-iprint="' + jobInvoice(id).id + '">Счёт № ' + jobInvoice(id).id + '</button><button type="button" class="btn sec" data-iact="' + jobInvoice(id).id + '">Акт</button>' : '<button type="button" class="btn sec" data-jinv="' + id + '">Выписать счёт</button>') : '') + '</div>' +
       '<div><button type="button" class="btn sec" data-close>' + (locked ? 'Закрыть' : 'Отмена') + '</button>' + (locked ? '' : '<button type="submit" class="btn">Сохранить</button>') + '</div></div></form>';
     $('modal').hidden = false;
@@ -2135,10 +2138,48 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       ['Аванс', o.prepaid ? money(o.prepaid) : 'нет'], ['К оплате при выдаче', money(pLeft(o))]];
     $('print').innerHTML = '<h2>ШИНОМОНТАЖ PRO</h2><div>Симферополь, ул. Трансформаторная, 6</div><h2 style="margin-top:6pt">Квитанция № П-' + o.id + ' на покраску дисков</h2>' +
       '<table>' + rows.map(function (r) { return '<tr><td>' + h(r[0]) + '</td><td>' + h(r[1]) + '</td></tr>'; }).join('') + '</table>' +
-      '<p>Диски выдаются по квитанции. Состояние дисков при приёмке записано выше' + (o.photos ? ' и сфотографировано' : '') + '.</p><p style="margin-top:10pt">Сдал (клиент): ________________ &nbsp;&nbsp; Принял: ________________</p>' +
+      '<p>Диски выдаются по квитанции. Состояние дисков при приёмке записано выше' + (o.photos ? ' и сфотографировано' : '') + '.</p><p>Гарантия на покраску и проточку дисков 1 год со дня выдачи. Гарантийный талон выдаём вместе с дисками.</p><p style="margin-top:10pt">Сдал (клиент): ________________ &nbsp;&nbsp; Принял: ________________</p>' +
       '<div class="cut">✂ отрезать — бирка на диски</div><div class="label"><div class="no pt">П-' + o.id + '</div><div class="co">' + h(o.color) + '</div>' +
       '<div class="sz">' + h(o.radius + ' · ' + (o.qty || 4) + ' шт.') + '</div><div class="ti">' + (o.turn ? 'С ПРОТОЧКОЙ' : 'без проточки') + '</div>' +
       '<div class="se">' + h([o.name, o.due ? 'к ' + dmy(o.due) : ''].filter(Boolean).join(' · ')) + '</div></div>';
+    window.print();
+  }
+
+  // ---------- гарантия: шиномонтаж и ремонт колёс — 30 дней (предложение, владелец может поменять), покраска и проточка дисков — 1 год
+  var WARR = {
+    tire: { name: 'Шиномонтаж, балансировка, ремонт колёс', term: '30 дней',
+      yes: ['повторная балансировка, если после нашей работы появилось биение руля или вибрация', 'подтяжка колёсных болтов и гаек', 'воздух уходит по борту шины или через вентиль, поставленный у нас', 'повторный ремонт прокола или пореза, отремонтированного у нас, если он пропускает воздух'],
+      no: ['новые проколы, порезы, грыжи, удары о ямы и бордюры, ДТП', 'колесо после нас снимали или ремонтировали в другом месте', 'езда на спущенной шине', 'износ шин и дисков, деформация диска, неисправности подвески', 'клиент отказался от замены вентиля или ремонта, которые советовал мастер'] },
+    paint: { name: 'Покраска и алмазная проточка дисков', term: '1 год',
+      yes: ['отслоение, вздутие, пузыри или растрескивание краски и лака', 'заметное изменение цвета по нашей вине'],
+      no: ['сколы от камней, царапины, удары о бордюры и ямы, ДТП', 'повреждения при шиномонтаже в другой мастерской', 'кислотные и абразивные средства для чистки дисков', 'места трещин и старого ремонта, отмеченные при приёмке'] }
+  };
+  function isPaintSvc(t) { return /покрас|проточ/i.test(t || ''); }
+  function printWarranty(kind, id) {
+    var o, rows, kinds, from;
+    if (kind === 'p') {
+      o = S.D.paint.find(function (x) { return x.id === id; }); if (!o) return;
+      from = o.issued || today(); kinds = ['paint'];
+      rows = [['Заказ', 'П-' + o.id], ['Работа', 'Покраска дисков' + (o.turn ? ' и алмазная проточка' : '') + ', ' + (o.qty || 4) + ' шт., ' + (o.radius || '') + (o.color ? ', цвет ' + o.color : '')], ['Дата выдачи', dmy(from)], ['Клиент', [o.name, o.phone].filter(Boolean).join(', ')], ['Автомобиль', [o.car, o.plate].filter(Boolean).join(' ')], ['Стоимость', money(o.price)]];
+    } else {
+      o = S.D.jobs.find(function (x) { return x.id === id; }); if (!o) return;
+      var t = jobTitle(o) || 'Шиномонтаж'; from = o.date;
+      var lines = jobLines(o).map(function (l) { return l.service; }).filter(Boolean);
+      kinds = []; if (!lines.length || lines.some(function (x) { return !isPaintSvc(x); })) kinds.push('tire'); if (lines.some(isPaintSvc)) kinds.push('paint');
+      var c = clientBy(o.plate) || {};
+      rows = [['Работа №', String(o.id)], ['Услуги', t], ['Дата', dmy(o.date)], ['Автомобиль', [o.car, o.plate].filter(Boolean).join(' ')], ['Клиент', [c.name, c.phone].filter(Boolean).join(', ')], ['Мастер', o.master || ''], ['Сумма', money(o.sum)]];
+    }
+    var sh = (S.D.shop || [])[0] || {};
+    var ul = function (a) { return '<ul style="margin:2pt 0 4pt 14pt;padding:0">' + a.map(function (x) { return '<li>' + h(x) + '</li>'; }).join('') + '</ul>'; };
+    $('print').innerHTML = '<div class="rc"><h2>ШИНОМОНТАЖ PRO</h2><div>Симферополь, ул. Трансформаторная, 6 · +7 (978) 772-70-02' + (sh.name ? ' · ' + h(sh.name) + (sh.inn ? ', ИНН ' + h(sh.inn) : '') : '') + '</div>' +
+      '<h2 style="margin-top:8pt">Гарантийный талон</h2>' +
+      '<table>' + rows.filter(function (r) { return r[1]; }).map(function (r) { return '<tr><td>' + h(r[0]) + '</td><td>' + h(r[1]) + '</td></tr>'; }).join('') + '</table>' +
+      kinds.map(function (k) { var w = WARR[k]; return '<p><b>' + h(w.name) + ': гарантия ' + w.term + ' со дня ' + (kind === 'p' ? 'выдачи' : 'работы') + ' (до ' + dmy(addDays(from, k === 'paint' ? 365 : 30)) + ').</b></p>' +
+        '<p>Бесплатно исправим:</p>' + ul(w.yes) + '<p>Гарантия не действует, если:</p>' + ul(w.no); }).join('') +
+      '<p>Как обратиться: позвоните или приезжайте с этим талоном, чеком или актом. Если талон потерялся, найдём работу в нашей базе по госномеру, марке машины или телефону. Мастер осмотрит колёса или диски; если недостаток по нашей вине, исправим бесплатно.</p>' +
+      (kinds.indexOf('tire') >= 0 ? '<p>Через 50–100 км после шиномонтажа проверьте затяжку колёс. У нас это бесплатно.</p>' : '') +
+      '<p>Права потребителя по Закону «О защите прав потребителей» сохраняются.</p>' +
+      '<p style="margin-top:12pt">Мастер: ________________ &nbsp;&nbsp; С условиями гарантии ознакомлен (клиент): ________________</p></div>';
     window.print();
   }
 
@@ -2199,6 +2240,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     if (d.today) { S.f[d.today] = today(); render(); return; }
     if (d.print) { printReceipt(Number(d.print)); return; }
     if (d.pprint) { printPaint(Number(d.pprint)); return; }
+    if (d.warr) { printWarranty(d.warr.charAt(0), Number(d.warr.slice(2))); return; }
     // безнал: реквизиты мастерской, счёт компании, счёт за одну работу, печать, отметка об оплате, удаление счёта
     if (d.shop != null) { var sh = (S.D.shop || [])[0]; openForm('shop', sh ? sh.id : null); return; }
     if (d.cinv) { openInvoice(Number(d.cinv)); return; }
