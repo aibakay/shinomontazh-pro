@@ -808,7 +808,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       '<div class="stat"><span>Машин за ' + MON[Number(month.slice(5)) - 1] + '</span><b>' + cars(jm) + '</b></div>' +
       (owner() ? '<div class="stat"><span>Касса за месяц</span><b>' + money(sum(jm, 'sum')) + '</b></div><div class="stat"><span>Мастеру за месяц</span><b>' + money(toMaster(jm) - monthHalf(month)) + '</b></div>' : '') +
       '<div class="stat"><span>Клиентов в базе</span><b>' + S.D.clients.length + '</b></div>' +
-      (owner() ? '<div class="stat"><span>Комплектов на хранении</span><b>' + (st.length - count('Выдано')) + '</b></div>' +
+      (owner() ? '<div class="stat"><span>Касса хранения за месяц</span><b>' + money(sum(stCash(month), 'cost')) + '</b></div><div class="stat"><span>Комплектов на хранении</span><b>' + (st.length - count('Выдано')) + '</b></div>' +
       '<div class="stat' + (count('Скоро срок') ? ' hot' : '') + '"><span>Срок хранения ≤ 14 дней</span><b>' + count('Скоро срок') + '</b></div>' +
       '<div class="stat' + (count('Просрочено') ? ' hot' : '') + '"><span>Хранение просрочено</span><b>' + count('Просрочено') + '</b></div>' +
       '<div class="stat"><span>Следующий № бирки</span><b>' + nextTag() + '</b></div>' : '') + '</div>';
@@ -1092,10 +1092,16 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       if (mode === 'out' && st !== 'Выдано') return false;
       return !q || [s.id, s.plate, who(s), s.tires, s.size].join(' ').toLowerCase().indexOf(q) >= 0;
     }).sort(function (a, b) { return b.id - a.id; });
+    var sm = today().slice(0, 7), sc = stCash(sm), un = stUnpaid();
+    var cash = '<div class="grid stats" style="margin-bottom:16px"><div class="stat"><span>Касса хранения за ' + MON[Number(sm.slice(5)) - 1].toLowerCase() + '</span><b>' + money(sum(sc, 'cost')) + '</b></div>' +
+      '<div class="stat"><span>Наличными</span><b>' + money(stBy(sc, 'Нал')) + '</b></div>' +
+      '<div class="stat"><span>Картой и переводом</span><b>' + money(stBy(sc, 'Карта') + stBy(sc, 'Перевод')) + '</b></div>' +
+      '<div class="stat' + (un.length ? ' hot' : '') + '"><span>Не оплачено' + (un.length ? ' · ' + un.length : '') + '</span><b>' + money(sum(un, 'cost')) + '</b></div></div>' +
+      '<p class="muted" style="margin:-6px 0 14px;font-size:13px">Хранение — отдельная касса: в кассу шиномонтажа и зарплату мастерам не входит. По дням — в «Отчёте».</p>';
     var cols = [{ t: '№ бирки' }, { t: 'Принято' }, { t: 'Госномер' }, { t: 'Клиент' }, { t: 'Шины' }, { t: 'Хранить до' }, { t: 'Стоимость', r: 1 }, { t: 'Статус' }, { t: '' }];
     return top('Хранение шин', '<input class="in search" type="search" placeholder="Поиск: № бирки, номер, шины" data-filter="sq" value="' + h(fv('sq', '')) + '">' +
       seg('sMode', mode, [['active', 'На складе'], ['soon', 'Срок'], ['out', 'Выдано'], ['all', 'Все']]) + '<button class="btn" type="button" data-new="storage">+ Приём шин</button>') +
-      table(cols, list.map(function (s) {
+      cash + table(cols, list.map(function (s) {
         var st = stStatus(s);
         var r = ['<b>№ ' + s.id + '</b>', dm(s.received), s.plate ? '<span class="plate">' + h(s.plate) + '</span>' : '', h(who(s)), h(s.tires || 'шины') + '<br><small class="muted">' + h([s.size, s.qty ? s.qty + ' шт.' : '', s.season.toLowerCase(), s.rims === 'С дисками' ? 'с дисками' : ''].filter(Boolean).join(', ')) + '</small>', s.until ? dmy(s.until) : '',
           '<span class="num">' + money(s.cost) + '</span>' + (s.paid ? '' : ' <span class="tag t-bad">не оплачено</span>'), tag(st),
@@ -1194,7 +1200,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     var pc = paintCash().filter(function (x) { return inM(x.date); });
     var r = { js: js, n: by('Нал'), k: by('Карта'), t: by('Перевод'), b: by('Безнал'), w: sum(js, 'sum'), st: sum(st, 'cost'), e: sum(ex, 'sum'), ex: ex, paint: sum(pc, 'sum'), cars: cars(js) };
     var hd = {}; ex.forEach(function (x) { hd[x.date] = (hd[x.date] || 0) + (x.sum || 0); });
-    r.mp = toMaster(js); r.mh = Object.keys(hd).reduce(function (a, d) { return a + expHalf(hd[d]); }, 0); r.mm = r.mp - r.mh; r.all = r.w + r.st; r.left = r.all - r.mm - r.e;
+    r.mp = toMaster(js); r.mh = Object.keys(hd).reduce(function (a, d) { return a + expHalf(hd[d]); }, 0); r.mm = r.mp - r.mh; r.all = r.w; r.left = r.all - r.mm - r.e;
     r.avg = r.cars ? Math.round(r.w / r.cars) : 0;
     r.days = {}; js.forEach(function (j) { r.days[j.date] = 1; }); r.days = Object.keys(r.days).length;
     return r;
@@ -1239,8 +1245,8 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     out += '<div class="mgrid">' +
       '<section class="card mbox"><h3>Деньги за месяц</h3>' +
         row('Наличными', money(r.n) + share(r.n)) + row('Картой', money(r.k) + share(r.k)) + row('Переводом', money(r.t) + share(r.t)) + row('Безналом (по счёту)', money(r.b) + share(r.b)) +
-        row('Выручка за работы', money(r.w), 'tot') + row('Хранение шин (оплачено)', money(r.st)) + row('Касса всего', money(r.all), 'tot') +
-        '<small class="muted">Покраска дисков — отдельная касса: ' + money(r.paint) + ' за месяц (внизу страницы).</small></section>' +
+        row('Касса за работы', money(r.w), 'tot') +
+        '<small class="muted">Отдельные кассы (внизу страницы): хранение шин ' + money(r.st) + ', покраска дисков ' + money(r.paint) + ' за месяц.</small></section>' +
       '<section class="card mbox"><h3>Куда ушли деньги</h3>' +
         row('Мастерам по проценту', money(r.mp)) + (r.mh ? row('Минус половина расходов', '−' + money(r.mh)) : '') + row('Мастерам к выплате', money(r.mm), 'tot') +
         row('Расходы из кассы', (r.e ? '−' : '') + money(r.e)) +
@@ -1265,28 +1271,30 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     var sv = svcMoney(r.js, false), ex = expByWhat(r.ex);
     $('print').innerHTML = '<h2>ШИНОМОНТАЖ PRO</h2><h2 style="margin-top:6pt">Отчёт за ' + MON[mo - 1].toLowerCase() + ' ' + m.slice(0, 4) + '</h2>' +
       '<div>Машин: ' + r.cars + ', работ: ' + r.js.length + ', средний чек: ' + money(r.avg) + ', дней с работой: ' + r.days + '</div>' +
-      '<table>' + tr('Наличными', money(r.n)) + tr('Картой', money(r.k)) + tr('Переводом', money(r.t)) + tr('Безналом', money(r.b)) + tr('Выручка за работы', money(r.w)) + tr('Хранение шин', money(r.st)) + tr('Касса всего', money(r.all)) + '</table>' +
+      '<table>' + tr('Наличными', money(r.n)) + tr('Картой', money(r.k)) + tr('Переводом', money(r.t)) + tr('Безналом', money(r.b)) + tr('Касса за работы', money(r.w)) + '</table>' +
       '<table>' + tr('Мастерам по проценту', money(r.mp)) + tr('Минус половина расходов', '−' + money(r.mh)) + tr('Мастерам к выплате', money(r.mm)) + tr('Расходы из кассы', '−' + money(r.e)) + tr('Остаётся мастерской', money(r.left)) + '</table>' +
       (ex.length ? '<table>' + ex.map(function (x) { return tr(x.k, money(x.s)); }).join('') + '</table>' : '') +
       (sv.length ? '<table>' + sv.map(function (x) { return tr(x.k + ' (' + x.n + ')', (x.s < 0 ? '−' : '') + money(Math.abs(x.s))); }).join('') + '</table>' : '') +
+      (r.st ? '<div>Касса хранения шин (отдельно): ' + money(r.st) + '</div>' : '') +
       (r.paint ? '<div>Касса покраски дисков (отдельно): ' + money(r.paint) + '</div>' : '');
     window.print();
   }
 
   V.report = function () {
     var m = fv('rMonth', today().slice(0, 7)), y = Number(m.slice(0, 4)), mo = Number(m.slice(5));
-    var days = new Date(Date.UTC(y, mo, 0)).getUTCDate(), p = pct(), rows = [], tot = { c: 0, s: 0, n: 0, k: 0, t: 0, b: 0, st: 0, m: 0, e: 0, nl: 0 };
+    var days = new Date(Date.UTC(y, mo, 0)).getUTCDate(), p = pct(), rows = [], tot = { c: 0, s: 0, n: 0, k: 0, t: 0, b: 0, m: 0, e: 0, nl: 0 };
     for (var i = 1; i <= days; i++) {
-      var d = m + '-' + p2(i), js = jobsOn(d), sts = stPaidOn(d);
-      var byPay = function (pay) { return sum(js.filter(function (j) { return j.pay === pay; }), 'sum') + sum(sts.filter(function (x) { return (x.payBy || 'Нал') === pay; }), 'cost'); };
-      var st = sum(sts, 'cost'), s = sum(js, 'sum') + st, n = byPay('Нал'), k = byPay('Карта'), t = byPay('Перевод'), bz = byPay('Безнал');
+      // хранение шин — отдельная касса (17.11.2026), сюда не входит
+      var d = m + '-' + p2(i), js = jobsOn(d);
+      var byPay = function (pay) { return sum(js.filter(function (j) { return j.pay === pay; }), 'sum'); };
+      var s = sum(js, 'sum'), n = byPay('Нал'), k = byPay('Карта'), t = byPay('Перевод'), bz = byPay('Безнал');
       var ex = sum(expOn(d), 'sum'), mm = toMaster(js) - expHalf(ex);
       tot.e += ex; tot.nl += dayCash(d).left;
-      tot.c += cars(js); tot.s += s; tot.n += n; tot.k += k; tot.t += t; tot.b += bz; tot.st += st; tot.m += mm;
-      if (!js.length && !sts.length && !ex && fv('rAll', '0') !== '1') continue;
-      rows.push([dm(d) + ' <span class="muted">' + DOW[dow(d)] + '</span>', cars(js) || '', money(s), money(n), money(k), money(t), bz ? money(bz) : '', st ? money(st) : '', money(mm), ex ? '−' + money(ex) : '', money(dayCash(d).left), money(s - mm - ex)]);
+      tot.c += cars(js); tot.s += s; tot.n += n; tot.k += k; tot.t += t; tot.b += bz; tot.m += mm;
+      if (!js.length && !ex && fv('rAll', '0') !== '1') continue;
+      rows.push([dm(d) + ' <span class="muted">' + DOW[dow(d)] + '</span>', cars(js) || '', money(s), money(n), money(k), money(t), bz ? money(bz) : '', money(mm), ex ? '−' + money(ex) : '', money(dayCash(d).left), money(s - mm - ex)]);
     }
-    var cols = [{ t: 'Дата' }, { t: 'Машин', r: 1 }, { t: 'Касса', r: 1 }, { t: 'Нал', r: 1 }, { t: 'Карта', r: 1 }, { t: 'Перевод', r: 1 }, { t: 'Безнал', r: 1 }, { t: 'Хранение', r: 1 }, { t: 'Мастерам', r: 1 }, { t: 'Расходы', r: 1 }, { t: 'Нал в кассе', r: 1 }, { t: 'Остаётся', r: 1 }];
+    var cols = [{ t: 'Дата' }, { t: 'Машин', r: 1 }, { t: 'Касса', r: 1 }, { t: 'Нал', r: 1 }, { t: 'Карта', r: 1 }, { t: 'Перевод', r: 1 }, { t: 'Безнал', r: 1 }, { t: 'Мастерам', r: 1 }, { t: 'Расходы', r: 1 }, { t: 'Нал в кассе', r: 1 }, { t: 'Остаётся', r: 1 }];
     // зарплата по каждому мастеру (продажи б/у шин не считаются)
     var per = {}, mh = monthHalf(m);
     jobsIn(m).filter(function (j) { return j.kind !== 'sale'; }).forEach(function (j) {
@@ -1309,9 +1317,29 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       '<button class="btn sec" type="button" data-mprint="' + m + '">Печать</button>') +
       monthSummary(m) +
       '<div class="top" style="margin:28px 0 12px"><h2>По дням</h2><div class="tools">' + seg('rAll', fv('rAll', '0'), [['0', 'Дни с работой'], ['1', 'Все дни']]) + '</div></div>' +
-      table(cols, rows, ['Итого', tot.c, money(tot.s), money(tot.n), money(tot.k), money(tot.t), money(tot.b), money(tot.st), money(tot.m), tot.e ? '−' + money(tot.e) : '', money(tot.nl), money(tot.s - tot.m - tot.e)], 'nw') +
-      mTable + paintReport(m, days);
+      table(cols, rows, ['Итого', tot.c, money(tot.s), money(tot.n), money(tot.k), money(tot.t), money(tot.b), money(tot.m), tot.e ? '−' + money(tot.e) : '', money(tot.nl), money(tot.s - tot.m - tot.e)], 'nw') +
+      mTable + storageReport(m, days) + paintReport(m, days);
   };
+  // касса хранения шин (17.11.2026): отдельно от кассы шиномонтажа, в зарплату мастерам и расходы не входит.
+  // деньги — в день оплаты (paidOn, у старых — дата приёма), способ — payBy
+  function stCash(m) { return S.D.storage.filter(function (x) { return x.paid && (x.paidOn || x.received || '').slice(0, 7) === m; }); }
+  function stUnpaid() { return S.D.storage.filter(function (x) { return !x.paid && !x.issued; }); }
+  function stBy(xs, pay) { return sum(xs.filter(function (x) { return (x.payBy || 'Нал') === pay; }), 'cost'); }
+  function storageReport(m, days) {
+    var sc = stCash(m), un = stUnpaid();
+    if (!sc.length && !S.D.storage.length) return '';
+    var rows = [];
+    for (var i = 1; i <= days; i++) {
+      var d = m + '-' + p2(i), xs = stPaidOn(d);
+      if (!xs.length) continue;
+      rows.push([dm(d) + ' <span class="muted">' + DOW[dow(d)] + '</span>', xs.length, money(stBy(xs, 'Нал')), money(stBy(xs, 'Карта')), money(stBy(xs, 'Перевод')), '<b class="num">' + money(sum(xs, 'cost')) + '</b>']);
+    }
+    var cols = [{ t: 'Дата' }, { t: 'Квитанций', r: 1 }, { t: 'Нал', r: 1 }, { t: 'Карта', r: 1 }, { t: 'Перевод', r: 1 }, { t: 'Всего', r: 1 }];
+    return '<h2 style="margin:28px 0 12px">Касса хранения шин</h2>' +
+      '<p class="muted" style="margin:-4px 0 12px;font-size:14px">Отдельно от кассы шиномонтажа: в «Кассу» выше, в расходы и в зарплату мастерам не входит. Деньги считаются в день оплаты.' +
+      (un.length ? ' Сейчас не оплачено: ' + un.length + ' на ' + money(sum(un, 'cost')) + '.' : '') + '</p>' +
+      table(cols, rows, ['Итого', sc.length, money(stBy(sc, 'Нал')), money(stBy(sc, 'Карта')), money(stBy(sc, 'Перевод')), money(sum(sc, 'cost'))]);
+  }
   // касса покраски: отдельно от кассы шиномонтажа, в зарплату мастерам не входит
   function paintReport(m, days) {
     var pc = paintCash().filter(function (x) { return (x.date || '').slice(0, 7) === m; });
