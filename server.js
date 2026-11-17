@@ -45,7 +45,8 @@ const server = http.createServer(function (req, res) {
     });
     return;
   }
-  let p = decodeURIComponent(url.pathname);
+  let p;
+  try { p = decodeURIComponent(url.pathname); } catch (e) { res.statusCode = 400; return res.end('Bad request'); }
   if (p === '/crm') { res.statusCode = 301; res.setHeader('Location', '/crm/'); return res.end(); }
   if (!PUBLIC.some(function (re) { return re.test(p); })) { res.statusCode = 404; return res.end('Not found'); }
   if (p.endsWith('/')) p += 'index.html';
