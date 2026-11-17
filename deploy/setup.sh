@@ -6,6 +6,7 @@
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 REPO=https://github.com/aibakay/shinomontazh-pro.git
+BRANCH=${BRANCH:-main}
 
 timedatectl set-timezone Europe/Moscow || true
 apt-get update -q
@@ -57,7 +58,7 @@ fi
 # код сайта
 if [ ! -d /srv/shinomontazh/.git ]; then
   install -d -o shino -g shino /srv/shinomontazh
-  sudo -u shino git clone -q "$REPO" /srv/shinomontazh
+  sudo -u shino git clone -q -b "$BRANCH" "$REPO" /srv/shinomontazh
 fi
 cd /srv/shinomontazh
 sudo -u shino git config pull.ff only

@@ -1,10 +1,12 @@
 #!/bin/bash
-# Автовыкладка: если в GitHub (ветка main) появилось новое — забрать и перезапустить сайт.
+# Автовыкладка: если в GitHub (ветка main, точнее — текущая ветка на сервере) появилось новое — забрать и перезапустить сайт.
 # Запускается таймером shinomontazh-update.timer раз в минуту.
 set -euo pipefail
 cd /srv/shinomontazh
-sudo -u shino git fetch -q origin main
-NEW=$(sudo -u shino git rev-parse origin/main)
+# ветка — та, что выбрана на сервере (обычно main)
+BR=$(sudo -u shino git rev-parse --abbrev-ref HEAD)
+sudo -u shino git fetch -q origin "$BR"
+NEW=$(sudo -u shino git rev-parse "origin/$BR")
 OLD=$(sudo -u shino git rev-parse HEAD)
 [ "$NEW" = "$OLD" ] && exit 0
 PKG_CHANGED=$(sudo -u shino git diff --name-only "$OLD" "$NEW" -- package.json | wc -l)
