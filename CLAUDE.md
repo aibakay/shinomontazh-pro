@@ -115,3 +115,7 @@
 - Всё для сервера — в папке `deploy/` (на Vercel не выкладывается): `setup.sh` (Node 22, PostgreSQL 17, nginx, ufw, swap, пользователь `shino`, код в `/srv/shinomontazh`, настройки в `/etc/shinomontazh.env`), служба `shinomontazh` (node на 127.0.0.1:3000, `TRUST_PROXY=1` — адрес клиента из `x-real-ip` от nginx), автовыкладка — таймер раз в минуту `update.sh` (git fetch main → перезапуск, при падении откат), копия базы каждую ночь в 03:30 в `/var/backups/shinomontazh` (30 дней).
 - Перенос базы: временная функция `api/migrate.js` на Vercel (только с `MIGRATE_SECRET`, иначе 404) отдаёт crm_docs/crm_seq и настройки входа; на сервере `sudo MIGRATE_SECRET=… node deploy/import-from-vercel.js --settings` (база сервера заменяется целиком). После переключения удалить `api/migrate.js` и переменную `MIGRATE_SECRET`.
 - Telegram с российского сервера — через ретранслятор `api/tg.js` на Vercel (`TELEGRAM_RELAY_URL`, `TELEGRAM_RELAY_SECRET`; общий код `api/_lib/tg.js`). Vercel-проект оставить ради ретранслятора.
+
+## Значок CRM на экране «Домой» (17.11.2026)
+- Иконка «CRM PRO»: чёрное поле, красный круг-колесо, белое «CRM» в центре, «PRO» по боковине (Unbounded). Файлы в `assets/`: `crm-icon-180.png` (apple-touch-icon), `crm-icon-192.png`, `crm-icon-512.png` (Android, maskable), `crm-icon-32.png` (вкладка), `crm-manifest.json` (start_url и scope `/crm/`). Подключены в `<head>` `crm/index.html`. `/assets/*` уже разрешён в `server.js`, сервер не менялся.
+- iPhone берёт значок в момент добавления: после смены иконки старый значок удалить и добавить заново.
