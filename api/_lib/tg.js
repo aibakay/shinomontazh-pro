@@ -1,6 +1,6 @@
 // Отправка сообщения в Telegram (заявки с сайта, тревоги CRM).
 // Два способа:
-//  • напрямую: TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID (так работает Vercel);
+//  • напрямую: TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID (так работает Vercel; чатов может быть несколько через запятую);
 //  • через ретранслятор: TELEGRAM_RELAY_URL + TELEGRAM_RELAY_SECRET — для сервера в России,
 //    откуда api.telegram.org открывается ненадёжно. Ретранслятор — функция api/tg.js на Vercel,
 //    она сама знает токен бота и чат. Сам токен на российском сервере тогда не нужен.
@@ -27,12 +27,18 @@ async function send(text, opts) {
     } else {
       const token = process.env.TELEGRAM_BOT_TOKEN, chat = process.env.TELEGRAM_CHAT_ID;
       if (!token || !chat) return false;
-      const body = { chat_id: chat, text: text, disable_web_page_preview: true };
-      if (html) body.parse_mode = 'HTML';
-      r = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body), signal: AbortSignal.timeout(timeout)
-      });
+      // Несколько получателей — через запятую; успех, если дошло хоть до одного.
+      const chats = String(chat).split(/[,;\s]+/).filter(Boolean);
+      const rs = await Promise.all(chats.map(function (id) {
+        const body = { chat_id: id, text: text, disable_web_page_preview: true };
+        if (html) body.parse_mode = 'HTML';
+        return fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body), signal: AbortSignal.timeout(timeout)
+        }).catch(function (e) { console.error('Telegram', id, e && e.message); return null; });
+      }));
+      r = rs.find(function (x) { return x && x.ok; }) || rs.find(Boolean);
+      if (!r) return false;
     }
     if (!r.ok) console.error('Telegram ответил ошибкой', r.status, await r.text().catch(() => ''));
     return r.ok;
