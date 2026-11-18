@@ -441,6 +441,11 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
   #print .inv .sign{margin-top:22pt;padding-top:6pt;border-top:2pt solid #000;display:grid;gap:14pt}
   #print .inv .sign.act{grid-template-columns:1fr 1fr;gap:24pt}
   #print .rc p{margin:4pt 0}
+  #print .rcpt table{margin:4pt 0} #print .rcpt td{padding:1.5pt 5pt} #print .rcpt td:nth-child(odd){width:17%}
+  #print .cp{float:right;font-size:9pt;border:1px solid #000;padding:1pt 5pt}
+  #print .pd{font-size:8.5pt;line-height:1.25;margin-top:6pt;text-align:justify}
+  #print .sg{margin:6pt 0 0;font-size:10pt}
+  #print .pb{break-after:page;page-break-after:always}
   .cut{border-top:1.5pt dashed #000;margin:10pt 0 8pt;padding-top:3pt;font-size:9pt;text-align:center}
   /* бирка на шины — на всю нижнюю половину листа, читается издалека на складе */
   .label{border:4pt solid #000;padding:8mm 10mm;height:128mm;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;text-align:center;page-break-inside:avoid;overflow:hidden}
@@ -1108,7 +1113,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
       cash + table(cols, list.map(function (s) {
         var st = stStatus(s);
         var r = ['<b>№ ' + s.id + '</b>', dm(s.received), s.plate ? '<span class="plate">' + h(s.plate) + '</span>' : '', h(who(s)), h(s.tires || 'шины') + '<br><small class="muted">' + h([s.size, s.qty ? s.qty + ' шт.' : '', s.season.toLowerCase(), s.rims === 'С дисками' ? 'с дисками' : ''].filter(Boolean).join(', ')) + '</small>', s.until ? dmy(s.until) : '',
-          '<span class="num">' + money(s.cost) + '</span>' + (s.paid ? '' : ' <span class="tag t-bad">не оплачено</span>'), tag(st),
+          '<span class="num">' + money(s.cost) + '</span>' + (s.paid ? '' : ' <span class="tag t-bad">не оплачено</span>'), tag(st) + (s.consent || st === 'Выдано' ? '' : ' <span class="tag t-bad">нет согласия</span>'),
           '<span style="display:inline-flex;gap:6px"><button class="btn sec small" type="button" data-print="' + s.id + '">Квитанция</button>' + (st === 'Выдано' ? '' : '<button class="btn dark small" type="button" data-issue="' + s.id + '">Выдать</button>') + '</span>'];
         r._open = 'storage:' + s.id; return r;
       }));
@@ -1669,7 +1674,7 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
     bookings: { title: ['Новая запись', 'Запись'], fields: [['date', 'Дата', 'date'], ['time', 'Время', 'slot'], ['car', 'Марка авто', 'car'], ['plate', 'Госномер (можно пусто)', 'plate'], ['name', 'Имя', 'text'], ['phone', 'Телефон', 'tel'], ['service', 'Услуга', 'service'], ['status', 'Статус', STATUS], ['comment', 'Комментарий', 'area']] },
     jobs: { title: ['Новая работа', 'Работа'], fields: [['date', 'Дата', 'date'], ['car', 'Марка машины', 'car'], ['items', 'Услуги', 'items'], ['pay', 'Оплата', JPAY, 'wide'], ['company', 'Компания (безнал)', 'company'], ['adjust', '', 'adjust'], ['master', 'Мастер', 'master'], ['comment', 'Комментарий', 'text'], ['_sum', '', 'sum']] },
     clients: { title: ['Новый клиент', 'Клиент'], fields: [['plate', 'Госномер', 'plate'], ['name', 'Имя', 'text'], ['phone', 'Телефон', 'tel'], ['make', 'Марка', 'text'], ['model', 'Модель', 'text'], ['size', 'Размер шин', 'text'], ['note', 'Примечание', 'area']] },
-    storage: { title: ['Приём шин на хранение', 'Хранение'], fields: [['received', 'Дата приёма', 'date'], ['plate', 'Госномер', 'plate'], ['name', 'Имя клиента', 'text'], ['phone', 'Телефон', 'tel'], ['tires', 'Шины (марка, модель)', 'text'], ['size', 'Размер', 'text'], ['qty', 'Количество', 'qty'], ['rims', 'Диски', ['Без дисков', 'С дисками']], ['season', 'Сезон', ['Зима', 'Лето', 'Всесезон']], ['until', 'Хранить до', 'date'], ['cost', 'Стоимость, ₽', 'int'], ['paid', 'Оплачено', 'bool'], ['paidOn', 'Дата оплаты', 'date'], ['payBy', 'Как оплатили', PAY], ['issued', 'Дата выдачи', 'date'], ['note', 'Примечание', 'text']] },
+    storage: { title: ['Приём шин на хранение', 'Хранение'], fields: [['received', 'Дата приёма', 'date'], ['plate', 'Госномер', 'plate'], ['name', 'Имя клиента', 'text'], ['phone', 'Телефон', 'tel'], ['tires', 'Шины (марка, модель)', 'text'], ['size', 'Размер', 'text'], ['qty', 'Количество', 'qty'], ['rims', 'Диски', ['Без дисков', 'С дисками']], ['season', 'Сезон', ['Зима', 'Лето', 'Всесезон']], ['until', 'Хранить до', 'date'], ['cost', 'Стоимость, ₽', 'int'], ['paid', 'Оплачено', 'bool'], ['paidOn', 'Дата оплаты', 'date'], ['payBy', 'Как оплатили', PAY], ['issued', 'Дата выдачи', 'date'], ['consent', 'Согласие на обработку данных подписано', 'bool'], ['note', 'Примечание', 'text']] },
     paint: { title: ['Приём дисков на покраску', 'Покраска'], fields: [['phone', 'Телефон клиента', 'ptel'], ['name', 'Имя', 'text'], ['plate', 'Госномер (можно пусто)', 'plate'], ['car', 'Машина', 'car'],
       ['radius', 'Диаметр', RADII], ['qty', 'Сколько дисков', ['1', '2', '3', '4']], ['turn', 'Алмазная проточка', 'yesno'], ['color', 'Цвет', 'color', 'wide'],
       ['cond', 'Состояние дисков: сколы, трещины, следы ремонта', 'area'], ['received', 'Принято', 'date'], ['due', 'Готово к', 'date'],
@@ -2216,13 +2221,28 @@ button,.btn,.seg,.nav,.pad,.tag{-webkit-user-select:none;user-select:none}
   }
 
   // ---------- квитанция на хранение
+  // 18.11.2026: в квитанции согласие на обработку персональных данных (152-ФЗ). Печатается 2 экземпляра:
+  // лист 1 — экземпляр мастерской (с подписью клиента остаётся у нас), лист 2 — экземпляр клиента и бирка на шины.
+  var PD_OPER = 'ИП Ржанов Евгений Александрович (ИНН 910914070795, ОГРНИП 322911200068558, г. Симферополь, ул. Трансформаторная, 6)';
+  function consentText() {
+    return '<div class="pd"><b>Согласие на обработку персональных данных.</b> Я, ________________________________________ (фамилия, имя, отчество), даю согласие ' + PD_OPER +
+      ' на обработку моих персональных данных: фамилии, имени, отчества, номера телефона, госномера и марки автомобиля. Цель: хранение моих шин по этой квитанции, их выдача и связь со мной по вопросам хранения (окончание срока, продление, выдача). ' +
+      'Данные записываются в базу мастерской на сервере в России, хранятся и используются только для этой цели и третьим лицам не передаются, кроме случаев, предусмотренных законом. ' +
+      'Согласие действует до выдачи шин и 1 год после выдачи, затем данные удаляются. Отозвать согласие можно письменно по адресу мастерской или по почте zhe3085@mail.ru; данные удалим в течение 10 рабочих дней. ' +
+      'Если шины в это время ещё на хранении, связаться со мной о них мастерская не сможет, шины выдаются по квитанции.</div>' +
+      '<p class="sg">Согласие даю. Подпись клиента: ________________ &nbsp; Дата: «____» ____________ 20___ г.</p>';
+  }
   function printReceipt(id) {
     var s = S.D.storage.find(function (x) { return x.id === id; }); if (!s) return;
     var c = clientBy(s.plate) || {};
     var rows = [['Дата приёма', dmy(s.received)], ['Клиент', who(s)], ['Телефон', phoneOf(s)], ['Автомобиль', [c.make, c.model, s.plate].filter(Boolean).join(' ')], ['Шины', s.tires], ['Размер', s.size], ['Количество', (s.qty || '') + ' шт.'], ['Диски', s.rims], ['Сезон', s.season], ['Хранение до', dmy(s.until)], ['Стоимость хранения', money(s.cost)], ['Оплачено', s.paid ? 'Да' : 'Нет']];
-    $('print').innerHTML = '<h2>ШИНОМОНТАЖ PRO</h2><div>Симферополь, ул. Трансформаторная, 6</div><h2 style="margin-top:6pt">Квитанция № ' + s.id + ' на хранение шин</h2>' +
-      '<table>' + rows.map(function (r) { return '<tr><td>' + h(r[0]) + '</td><td>' + h(r[1]) + '</td></tr>'; }).join('') + '</table>' +
-      '<p>Шины выдаются по предъявлению квитанции. Проверьте данные перед подписью.</p><p style="margin-top:10pt">Сдал (клиент): ________________ &nbsp;&nbsp; Принял (мастер): ________________</p>' +
+    function copy(whose) {
+      return '<div class="rcpt"><div class="cp">Экземпляр ' + whose + '</div><h2>ШИНОМОНТАЖ PRO</h2><div>Симферополь, ул. Трансформаторная, 6</div><h2 style="margin-top:6pt">Квитанция № ' + s.id + ' на хранение шин</h2>' +
+        '<table>' + rows.map(function (r, i) { return i % 2 ? '' : '<tr><td>' + h(r[0]) + '</td><td>' + h(r[1]) + '</td><td>' + h(rows[i + 1][0]) + '</td><td>' + h(rows[i + 1][1]) + '</td></tr>'; }).join('') + '</table>' +
+        '<p>Шины выдаются по предъявлению квитанции. Проверьте данные перед подписью.</p><p style="margin-top:8pt">Сдал (клиент): ________________ &nbsp;&nbsp; Принял (мастер): ________________</p>' +
+        consentText() + '</div>';
+    }
+    $('print').innerHTML = copy('мастерской') + '<div class="pb"></div>' + copy('клиента') +
       '<div class="cut">✂ отрезать — бирка на шины</div><div class="label"><div class="no">№ ' + s.id + '</div>' + (s.plate ? '<div class="pl">' + h(s.plate) + '</div>' : '') +
       '<div class="ti">' + h([c.make, s.tires].filter(Boolean).join(' · ')) + '</div><div class="sz">' + h(s.size) + (s.qty ? ' · ' + s.qty + ' шт.' : '') + '</div>' +
       '<div class="se">' + h([s.season, s.rims === 'С дисками' ? 'с дисками' : '', s.until ? 'до ' + dmy(s.until) : ''].filter(Boolean).join(' · ')) + '</div></div>';
