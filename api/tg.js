@@ -1,6 +1,6 @@
 // Ретранслятор Telegram для сервера в России: принимает сообщение и пересылает его боту.
 // Живёт на Vercel (за рубежом), где api.telegram.org доступен.
-// Переменные Vercel: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID (один или несколько через запятую), TELEGRAM_RELAY_SECRET (тот же, что на сервере).
+// Переменные Vercel: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID (один или несколько через запятую), TELEGRAM_CHAT_IDS_EXTRA (доп. получатели), TELEGRAM_RELAY_SECRET (тот же, что на сервере).
 const crypto = require('crypto');
 
 function same(a, b) {
@@ -21,7 +21,9 @@ module.exports = async function handler(req, res) {
   if (!text) return res.status(400).json({ ok: false });
 
   // TELEGRAM_CHAT_ID может быть списком через запятую: каждый получатель получает сообщение.
-  const chats = String(chat).split(/[,;\s]+/).filter(Boolean);
+  // TELEGRAM_CHAT_IDS_EXTRA — дополнительные получатели (через запятую), чтобы не трогать основной ID.
+  const chats = Array.from(new Set((String(chat) + ',' + (process.env.TELEGRAM_CHAT_IDS_EXTRA || ''))
+    .split(/[,;\s]+/).filter(Boolean)));
   const results = await Promise.all(chats.map(async function (id) {
     const body = { chat_id: id, text: text, disable_web_page_preview: true };
     if (b.html) body.parse_mode = 'HTML';

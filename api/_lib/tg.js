@@ -28,7 +28,9 @@ async function send(text, opts) {
       const token = process.env.TELEGRAM_BOT_TOKEN, chat = process.env.TELEGRAM_CHAT_ID;
       if (!token || !chat) return false;
       // Несколько получателей — через запятую; успех, если дошло хоть до одного.
-      const chats = String(chat).split(/[,;\s]+/).filter(Boolean);
+      // TELEGRAM_CHAT_IDS_EXTRA — дополнительные получатели (через запятую), чтобы не трогать основной ID.
+      const chats = Array.from(new Set((String(chat) + ',' + (process.env.TELEGRAM_CHAT_IDS_EXTRA || ''))
+        .split(/[,;\s]+/).filter(Boolean)));
       const rs = await Promise.all(chats.map(function (id) {
         const body = { chat_id: id, text: text, disable_web_page_preview: true };
         if (html) body.parse_mode = 'HTML';
