@@ -21,7 +21,7 @@ const ROOT = __dirname;
 
 const ROUTES = { '/api/lead': require('./api/lead'), '/api/crm': require('./api/crm'), '/api/queue': require('./api/queue') };
 // Отдаём наружу только страницы сайта и CRM — не код сервера, не базу и не настройки
-const PUBLIC = [/^\/$/, /^\/(index|privacy|consent)\.html$/, /^\/(favicon\.svg|og\.jpg|robots\.txt|sitemap\.xml)$/, /^\/crm\/(index\.html)?$/, /^\/(photos|assets)\/[\w\-.]+$/];
+const PUBLIC = [/^\/$/, /^\/(index|privacy|consent)\.html$/, /^\/(favicon\.svg|og\.jpg|robots\.txt|sitemap\.xml|yandex_[0-9a-f]+\.html)$/, /^\/crm\/(index\.html)?$/, /^\/(photos|assets)\/[\w\-.]+$/];
 const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.avif': 'image/avif', '.svg': 'image/svg+xml', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml; charset=utf-8', '.mp4': 'video/mp4', '.webm': 'video/webm' };
 
 function shim(res) {
